@@ -1,22 +1,41 @@
-# cities-skylines1-agent-skill
+<p align="center">
+  <img src="docs/public/agent-bridge-icon.svg" width="96" height="96" alt="Cities: Skylines Agent Bridge icon">
+</p>
 
-[日本語 README](README.ja.md)
+<h1 align="center">cities-skylines1-agent-skill</h1>
 
-An experimental Codex skill and Cities: Skylines 1 mod for letting an AI agent inspect, build, repair, and save a CS1 city through a local HTTP API.
+<p align="center">
+  Codex skill and Cities: Skylines 1 mod for API-driven city inspection, repair, building, zoning, and saving.
+</p>
 
-The goal is simple: stop relying on screenshots for city state, expose useful game data as API responses, and let agents make small explicit changes such as "delete this segment", "build this road", "place this service", "paint this zone", and "save the city".
+<p align="center">
+  <a href="README.ja.md">日本語 README</a> ·
+  <a href="https://sunwood-ai-labs.github.io/cities-skylines1-agent-skill/">Docs</a> ·
+  <a href="docs/api.md">API Reference</a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/Sunwood-ai-labs/cities-skylines1-agent-skill/actions/workflows/docs.yml"><img alt="Docs workflow" src="https://github.com/Sunwood-ai-labs/cities-skylines1-agent-skill/actions/workflows/docs.yml/badge.svg"></a>
+  <a href="https://github.com/Sunwood-ai-labs/cities-skylines1-agent-skill/actions/workflows/pages.yml"><img alt="Pages workflow" src="https://github.com/Sunwood-ai-labs/cities-skylines1-agent-skill/actions/workflows/pages.yml/badge.svg"></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green.svg"></a>
+  <img alt="Platform: Windows" src="https://img.shields.io/badge/platform-Windows-blue.svg">
+  <img alt="Game: Cities Skylines 1" src="https://img.shields.io/badge/game-Cities%3A%20Skylines%201-2ec4b6.svg">
+</p>
+
+The goal is simple: stop relying on screenshots for city state. The bridge exposes useful Cities: Skylines 1 data as local API responses, then lets agents make small explicit changes such as deleting a segment, building a road, placing a service, painting a zone, changing simulation speed, and saving the city.
 
 ![API notification overlay in Cities: Skylines 1](docs/assets/api-notification.jpg)
 
-## What It Does
+## ✨ What It Does
 
 - Runs a CS1 mod that listens on `http://127.0.0.1:32123`.
 - Exposes city state APIs for problems, facilities, networks, road anomalies, building placement anomalies, saves, and prefabs.
-- Exposes focused command APIs for network creation, zoning, building placement, building movement, bulldozing, simulation speed, and saving.
+- Exposes focused command APIs for network creation, zoning, building placement, building movement, bulldozing, simulation speed, batch helpers, and saving.
 - Shows in-game API activity notifications so the CS1 screen reflects what the agent is doing.
-- Includes Windows scripts for building the mod, launching Resume, starting a fresh map, developing a starter city, inspecting issues, and saving.
+- Includes Windows scripts for building the mod, launching Resume, starting a fresh map, inspecting issues, repairing bounded anomalies, and saving.
+- Ships as a Codex skill through [SKILL.md](SKILL.md) and [agents/openai.yaml](agents/openai.yaml).
 
-## Screenshot Tour
+## 🖼️ Screenshot Tour
 
 ### In-Game API Notifications
 
@@ -34,7 +53,51 @@ The bridge can resume a save, inspect city data, repair infrastructure, and keep
 
 Road issues are detected from CS1 network data, not image recognition. The agent can then call separate APIs to bulldoze bad segments and rebuild clean connections.
 
-## API Surface
+## 🚀 Quick Start
+
+Edit `scripts/build.ps1` if your CS1 install path differs, then build and install the mod:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build.ps1
+```
+
+The script compiles `SkylinesAgentBridge.dll` and copies it into:
+
+```text
+%LOCALAPPDATA%\Colossal Order\Cities_Skylines\Addons\Mods\SkylinesAgentBridge
+```
+
+Enable the mod in the CS1 content manager, load a city, then test:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:32123/health
+Invoke-RestMethod http://127.0.0.1:32123/state/summary
+```
+
+For the normal agent loop, resume the newest local save:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-resume.ps1
+```
+
+For clean experiments, start a fresh map:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-new-map.ps1
+```
+
+## 🧭 Agent Repair Pattern
+
+Keep the workflow generic. Prefer separate commands over a magical repair endpoint:
+
+1. Inspect with `/state/problems`, `/state/road-anomalies`, `/state/building-anomalies`, `/state/facilities`, and `/state/networks`.
+2. Remove bad objects with `/commands/bulldoze`.
+3. Rebuild with `/commands/build-network`, `/commands/place-building`, `/commands/move-building`, and `/commands/set-zone`.
+4. Let the simulation settle with `/commands/set-simulation-speed`.
+5. Re-check state APIs.
+6. Save with `/commands/save` or `scripts/save-city.ps1`, then verify with `/state/saves`.
+
+## 🔌 API Surface
 
 Read APIs:
 
@@ -64,7 +127,7 @@ Command APIs:
 
 See [docs/api.md](docs/api.md) for request examples and response shapes.
 
-## Skill Usage
+## 🧩 Skill Usage
 
 This repository is also a Codex skill. The root [SKILL.md](SKILL.md) tells an agent how to operate CS1 through this bridge.
 
@@ -74,81 +137,32 @@ Example prompt:
 Use $cities-skylines1-agent-skill to resume my CS1 city, inspect current problems, repair road/infrastructure issues with separate API calls, save the city, and report what changed.
 ```
 
-## Article
+## 📚 Documentation
 
-- [Japanese: Letting Codex build a Cities: Skylines city as an AI mayor](docs/articles/building-cities-skylines-with-ai-agents-ja.md)
+- [Docs site](https://sunwood-ai-labs.github.io/cities-skylines1-agent-skill/)
+- [Getting Started](docs/guide/getting-started.md)
+- [Agent Workflow](docs/guide/usage.md)
+- [Architecture](docs/guide/architecture.md)
+- [Troubleshooting](docs/guide/troubleshooting.md)
+- [API Reference](docs/api.md)
+- [Japanese experiment article](docs/articles/building-cities-skylines-with-ai-agents-ja.md)
 
-## Build The Mod
-
-Edit `scripts/build.ps1` if your CS1 install path differs, then run:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build.ps1
-```
-
-The script compiles `SkylinesAgentBridge.dll` and copies it into:
-
-```text
-%LOCALAPPDATA%\Colossal Order\Cities_Skylines\Addons\Mods\SkylinesAgentBridge
-```
-
-Enable the mod in the CS1 content manager, load a city, then test:
-
-```powershell
-Invoke-RestMethod http://127.0.0.1:32123/health
-Invoke-RestMethod http://127.0.0.1:32123/state/summary
-```
-
-## Resume A City
-
-This is the normal repair loop. It launches through Steam, clicks the Paradox Launcher Resume button, waits for the API, and prints the newest local save before launching:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-resume.ps1
-```
-
-## Start A Fresh Map
-
-For clean experiments:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-new-map.ps1
-```
-
-Useful flags:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-new-map.ps1 -SkipBuild
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-new-map.ps1 -SkipNewMap
-```
-
-## Agent Repair Pattern
-
-Keep the agent workflow generic. Prefer separate commands over a magical repair endpoint:
-
-1. Inspect with `/state/problems`, `/state/road-anomalies`, `/state/building-anomalies`, `/state/facilities`, and `/state/networks`.
-2. Remove bad objects with `/commands/bulldoze`.
-3. Rebuild with `/commands/build-network`, `/commands/place-building`, `/commands/move-building`, and `/commands/set-zone`.
-4. Let the simulation settle with `/commands/set-simulation-speed`.
-5. Re-check state APIs.
-6. Save with `/commands/save` and verify with `/state/saves`.
-
-## Repository Layout
+## 🗂️ Repository Layout
 
 ```text
 .
 ├── SKILL.md                 # Codex skill instructions
 ├── agents/openai.yaml       # Skill UI metadata
 ├── src/                     # CS1 mod source
-├── scripts/                 # Build, launch, inspect, repair, save scripts
-├── docs/api.md              # API reference
-└── docs/assets/             # README screenshots
+├── scripts/                 # Build, launch, inspect, repair, save, and QA scripts
+├── docs/                    # VitePress docs and API reference
+└── .github/workflows/       # Docs validation and Pages deployment
 ```
 
-## Status
+## ⚠️ Status
 
 This is experimental and built for CS1 on Windows. Test on throwaway saves first. The bridge mutates live CS1 simulation objects through game-thread queued commands, so keep changes small and verify after each step.
 
-## License
+## 📄 License
 
 MIT. See [LICENSE](LICENSE).

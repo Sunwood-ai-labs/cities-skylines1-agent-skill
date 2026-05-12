@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-labelledby="title desc">
+  <title id="title">Cities: Skylines Agent Bridge icon</title>
+  <desc id="desc">A flat city block connected to an API bridge line.</desc>
+  <rect width="96" height="96" rx="18" fill="#14213d"/>
+  <path d="M18 66h60" stroke="#fca311" stroke-width="8" stroke-linecap="round"/>
+  <path d="M25 66V34h14v32M45 66V22h16v44M67 66V42h10v24" fill="none" stroke="#e5e5e5" stroke-width="7" stroke-linejoin="round"/>
+  <circle cx="24" cy="72" r="5" fill="#2ec4b6"/>
+  <circle cx="48" cy="72" r="5" fill="#2ec4b6"/>
+  <circle cx="72" cy="72" r="5" fill="#2ec4b6"/>
+  <path d="M24 72h48" stroke="#2ec4b6" stroke-width="4" stroke-linecap="round"/>
+</svg>

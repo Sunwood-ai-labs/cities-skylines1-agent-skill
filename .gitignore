@@ -1,5 +1,8 @@
 bin/
 obj/
+node_modules/
+docs/.vitepress/cache/
+docs/.vitepress/dist/
 *.dll
 *.pdb
 *.user

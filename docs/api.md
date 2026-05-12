@@ -1,4 +1,6 @@
-# API Draft
+# API Reference
+
+[日本語版](ja/api.md)
 
 Base URL:
 
