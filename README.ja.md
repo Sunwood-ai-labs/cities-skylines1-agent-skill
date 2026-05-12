@@ -36,7 +36,7 @@ Cities: Skylines 1 をAIエージェントから操作するための、Codex Sk
 
 ## 記事
 
-- [Cities: Skylines 1をAIエージェントに都市開発させるためのMODを作った](docs/articles/building-cities-skylines-with-ai-agents-ja.md)
+- [CodexにCities: Skylinesの都市建設をやらせてみた！ AI市長が「村」を爆誕させる実験](docs/articles/building-cities-skylines-with-ai-agents-ja.md)
 
 ## API
 

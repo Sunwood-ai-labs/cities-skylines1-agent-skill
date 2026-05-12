@@ -76,7 +76,7 @@ Use $cities-skylines1-agent-skill to resume my CS1 city, inspect current problem
 
 ## Article
 
-- [Japanese: Building a Cities: Skylines 1 mod for AI agent city development](docs/articles/building-cities-skylines-with-ai-agents-ja.md)
+- [Japanese: Letting Codex build a Cities: Skylines city as an AI mayor](docs/articles/building-cities-skylines-with-ai-agents-ja.md)
 
 ## Build The Mod
 
