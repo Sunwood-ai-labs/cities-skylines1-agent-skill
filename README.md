@@ -74,6 +74,10 @@ Example prompt:
 Use $cities-skylines1-agent-skill to resume my CS1 city, inspect current problems, repair road/infrastructure issues with separate API calls, save the city, and report what changed.
 ```
 
+## Article
+
+- [Japanese: Building a Cities: Skylines 1 mod for AI agent city development](docs/articles/building-cities-skylines-with-ai-agents-ja.md)
+
 ## Build The Mod
 
 Edit `scripts/build.ps1` if your CS1 install path differs, then run:

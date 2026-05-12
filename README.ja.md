@@ -34,6 +34,10 @@ Cities: Skylines 1 をAIエージェントから操作するための、Codex Sk
 
 道路の異常は画像認識ではなく、CS1のネットワークデータから検出します。検出後は、削除APIと作成APIを分けて叩いて修復します。
 
+## 記事
+
+- [Cities: Skylines 1をAIエージェントに都市開発させるためのMODを作った](docs/articles/building-cities-skylines-with-ai-agents-ja.md)
+
 ## API
 
 取得API:
