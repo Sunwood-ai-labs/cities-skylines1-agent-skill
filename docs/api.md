@@ -12,6 +12,21 @@ messages for several seconds, for example `API OK: Read city problems` or
 `API OK: Build network Basic Road`. `/health` is intentionally excluded because
 it can be called before a level exists.
 
+![API notification overlay](assets/api-notification.jpg)
+
+## Agent Workflow
+
+The intended workflow is intentionally generic:
+
+1. Read state from the API.
+2. Decide which small change is needed.
+3. Call one command API.
+4. Let the simulation settle.
+5. Re-read state.
+6. Save and verify the save file.
+
+![Agent-built starter city](assets/city-overview.jpg)
+
 ## GET /health
 
 Returns bridge status without requiring a loaded city.

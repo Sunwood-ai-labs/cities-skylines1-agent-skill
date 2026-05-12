@@ -1,8 +1,44 @@
-# Skylines Agent Bridge
+# cities-skylines1-agent-skill
 
-Experimental Cities: Skylines 1 mod that exposes a localhost HTTP API for AI agents.
+[日本語 README](README.ja.md)
 
-The mod is intentionally small at first. Agents should usually call the focused endpoints one at a time; `batch` exists as a convenience for compact experiments.
+An experimental Codex skill and Cities: Skylines 1 mod for letting an AI agent inspect, build, repair, and save a CS1 city through a local HTTP API.
+
+The goal is simple: stop relying on screenshots for city state, expose useful game data as API responses, and let agents make small explicit changes such as "delete this segment", "build this road", "place this service", "paint this zone", and "save the city".
+
+![API notification overlay in Cities: Skylines 1](docs/assets/api-notification.jpg)
+
+## What It Does
+
+- Runs a CS1 mod that listens on `http://127.0.0.1:32123`.
+- Exposes city state APIs for problems, facilities, networks, road anomalies, building placement anomalies, saves, and prefabs.
+- Exposes focused command APIs for network creation, zoning, building placement, building movement, bulldozing, simulation speed, and saving.
+- Shows in-game API activity notifications so the CS1 screen reflects what the agent is doing.
+- Includes Windows scripts for building the mod, launching Resume, starting a fresh map, developing a starter city, inspecting issues, and saving.
+
+## Screenshot Tour
+
+### In-Game API Notifications
+
+Every game-state API request appears in the CS1 UI for a few seconds.
+
+![API notification overlay](docs/assets/api-notification.jpg)
+
+### Agent-Built Starter City
+
+The bridge can resume a save, inspect city data, repair infrastructure, and keep developing the city without starting over.
+
+![Agent-built starter city](docs/assets/city-overview.jpg)
+
+### Road Repair Workflow
+
+Road issues are detected from CS1 network data, not image recognition. The agent can then call separate APIs to bulldoze bad segments and rebuild clean connections.
+
+![Road repair inspection](docs/assets/road-repair-before.jpg)
+
+## API Surface
+
+Read APIs:
 
 - `GET /health`
 - `GET /state/summary`
@@ -15,6 +51,9 @@ The mod is intentionally small at first. Agents should usually call the focused 
 - `GET /prefabs/roads`
 - `GET /prefabs/networks`
 - `GET /prefabs/buildings`
+
+Command APIs:
+
 - `POST /commands/build-network`
 - `POST /commands/build-road` compatibility alias
 - `POST /commands/set-zone`
@@ -23,18 +62,23 @@ The mod is intentionally small at first. Agents should usually call the focused 
 - `POST /commands/bulldoze`
 - `POST /commands/save`
 - `POST /commands/set-simulation-speed`
-- `POST /commands/batch` optional
+- `POST /commands/batch` optional convenience wrapper
 
-The HTTP server runs on `127.0.0.1:32123`. Requests that touch game state are queued and executed from the CS1 simulation update callback, so external agents do not directly mutate game objects from an arbitrary network thread.
+See [docs/api.md](docs/api.md) for request examples and response shapes.
 
-In-game API notifications are shown as a small overlay while a city is loaded.
-Each game-state API request displays a short status line such as
-`API OK: Build network Basic Road`, so the running game screen reflects what an
-agent is doing.
+## Skill Usage
 
-## Build
+This repository is also a Codex skill. The root [SKILL.md](SKILL.md) tells an agent how to operate CS1 through this bridge.
 
-Edit `scripts/build.ps1` if your Cities: Skylines install path differs, then run:
+Example prompt:
+
+```text
+Use $cities-skylines1-agent-skill to resume my CS1 city, inspect current problems, repair road/infrastructure issues with separate API calls, save the city, and report what changed.
+```
+
+## Build The Mod
+
+Edit `scripts/build.ps1` if your CS1 install path differs, then run:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build.ps1
@@ -46,22 +90,24 @@ The script compiles `SkylinesAgentBridge.dll` and copies it into:
 %LOCALAPPDATA%\Colossal Order\Cities_Skylines\Addons\Mods\SkylinesAgentBridge
 ```
 
-Enable the mod in the CS1 content manager, load a city, then query:
+Enable the mod in the CS1 content manager, load a city, then test:
 
 ```powershell
 Invoke-RestMethod http://127.0.0.1:32123/health
 Invoke-RestMethod http://127.0.0.1:32123/state/summary
 ```
 
-Or run:
+## Resume A City
+
+This is the normal repair loop. It launches through Steam, clicks the Paradox Launcher Resume button, waits for the API, and prints the newest local save before launching:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\smoke-test.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-resume.ps1
 ```
 
 ## Start A Fresh Map
 
-On this machine, this script kills the current CS1 process, launches through Steam and the Paradox Launcher, dismisses the startup modals, starts the currently selected new-game map, and waits for the Agent Bridge API:
+For clean experiments:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-new-map.ps1
@@ -70,90 +116,38 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-new-map.ps1
 Useful flags:
 
 ```powershell
-# Do not rebuild the DLL first.
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-new-map.ps1 -SkipBuild
-
-# Launch and wait for API without starting a new map from the menu.
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-new-map.ps1 -SkipNewMap
 ```
 
-## Resume Latest Save
+## Agent Repair Pattern
 
-This is the normal repair loop. It launches through Steam, clicks the launcher
-Resume button, waits for the API, and prints the newest local save before
-launching:
+Keep the agent workflow generic. Prefer separate commands over a magical repair endpoint:
 
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-resume.ps1
+1. Inspect with `/state/problems`, `/state/road-anomalies`, `/state/building-anomalies`, `/state/facilities`, and `/state/networks`.
+2. Remove bad objects with `/commands/bulldoze`.
+3. Rebuild with `/commands/build-network`, `/commands/place-building`, `/commands/move-building`, and `/commands/set-zone`.
+4. Let the simulation settle with `/commands/set-simulation-speed`.
+5. Re-check state APIs.
+6. Save with `/commands/save` and verify with `/state/saves`.
+
+## Repository Layout
+
+```text
+.
+├── SKILL.md                 # Codex skill instructions
+├── agents/openai.yaml       # Skill UI metadata
+├── src/                     # CS1 mod source
+├── scripts/                 # Build, launch, inspect, repair, save scripts
+├── docs/api.md              # API reference
+├── docs/assets/             # README screenshots
+└── captures/                # Raw verification screenshots
 ```
 
-## Road Command
+## Status
 
-Dry run:
+This is experimental and built for CS1 on Windows. Test on throwaway saves first. The bridge mutates live CS1 simulation objects through game-thread queued commands, so keep changes small and verify after each step.
 
-```powershell
-$body = @{
-  dryRun = $true
-  roadPrefab = "Basic Road"
-  start = @{ x = 0; z = 0 }
-  end = @{ x = 80; z = 0 }
-  name = "Agent Test Road"
-} | ConvertTo-Json -Depth 4
+## License
 
-Invoke-RestMethod -Method Post -Uri http://127.0.0.1:32123/commands/build-network -Body $body -ContentType "application/json"
-```
-
-Actual build:
-
-```powershell
-$body = @{
-  dryRun = $false
-  roadPrefab = "Basic Road"
-  start = @{ x = 0; z = 0 }
-  end = @{ x = 80; z = 0 }
-  name = "Agent Test Road"
-} | ConvertTo-Json -Depth 4
-
-Invoke-RestMethod -Method Post -Uri http://127.0.0.1:32123/commands/build-network -Body $body -ContentType "application/json"
-```
-
-This is an early bridge, not a mature city planner. Use a throwaway save while testing.
-
-Zone paint dry run:
-
-```powershell
-$body = @{
-  dryRun = $true
-  zone = "ResidentialLow"
-  center = @{ x = 40; z = 0 }
-  radius = 32
-} | ConvertTo-Json -Depth 4
-
-Invoke-RestMethod -Method Post -Uri http://127.0.0.1:32123/commands/set-zone -Body $body -ContentType "application/json"
-```
-
-Batch dry run:
-
-```powershell
-$body = @{
-  dryRun = $true
-  stopOnError = $true
-  commands = @(
-    @{
-      type = "build-road"
-      roadPrefab = "Basic Road"
-      start = @{ x = 120; z = 0 }
-      end = @{ x = 200; z = 0 }
-      name = "Agent Batch Road"
-    },
-    @{
-      type = "set-zone"
-      zone = "ResidentialLow"
-      center = @{ x = 160; z = 0 }
-      radius = 48
-    }
-  )
-} | ConvertTo-Json -Depth 6
-
-Invoke-RestMethod -Method Post -Uri http://127.0.0.1:32123/commands/batch -Body $body -ContentType "application/json"
-```
+MIT. See [LICENSE](LICENSE).
