@@ -19,6 +19,7 @@ export default defineConfig({
     nav: [
       { text: 'Guide', link: '/guide/getting-started' },
       { text: 'API', link: '/api' },
+      { text: 'Releases', link: '/releases/v0.1.0/' },
       { text: 'Japanese', link: '/ja/' },
       { text: 'GitHub', link: 'https://github.com/Sunwood-ai-labs/cities-skylines1-agent-skill' }
     ],
@@ -36,6 +37,7 @@ export default defineConfig({
         text: 'Reference',
         items: [
           { text: 'API Reference', link: '/api' },
+          { text: 'Release Notes v0.1.0', link: '/releases/v0.1.0/' },
           { text: 'Experiment Article (JA)', link: '/articles/building-cities-skylines-with-ai-agents-ja' }
         ]
       }
@@ -62,6 +64,7 @@ export default defineConfig({
         nav: [
           { text: 'ガイド', link: '/ja/guide/getting-started' },
           { text: 'API', link: '/ja/api' },
+          { text: 'リリース', link: '/ja/releases/v0.1.0/' },
           { text: 'English', link: '/' },
           { text: 'GitHub', link: 'https://github.com/Sunwood-ai-labs/cities-skylines1-agent-skill' }
         ],
@@ -79,6 +82,7 @@ export default defineConfig({
             text: 'リファレンス',
             items: [
               { text: 'APIリファレンス', link: '/ja/api' },
+              { text: 'リリースノート v0.1.0', link: '/ja/releases/v0.1.0/' },
               { text: '実験記事', link: '/articles/building-cities-skylines-with-ai-agents-ja' }
             ]
           }

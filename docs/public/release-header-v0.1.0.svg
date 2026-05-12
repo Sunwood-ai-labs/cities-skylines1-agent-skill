@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" role="img" aria-labelledby="title desc">
+  <title id="title">cities-skylines1-agent-skill v0.1.0 release header</title>
+  <desc id="desc">A release header for the initial Cities: Skylines 1 Agent Skill release.</desc>
+  <rect width="1200" height="420" fill="#14213d"/>
+  <rect x="64" y="64" width="1072" height="292" rx="28" fill="#1f2f55"/>
+  <path d="M88 294h1024" stroke="#fca311" stroke-width="12" stroke-linecap="round"/>
+  <path d="M134 294V180h44v114M214 294V128h54v166M306 294V206h42v88" fill="none" stroke="#e5e5e5" stroke-width="14" stroke-linejoin="round"/>
+  <circle cx="142" cy="320" r="13" fill="#2ec4b6"/>
+  <circle cx="238" cy="320" r="13" fill="#2ec4b6"/>
+  <circle cx="334" cy="320" r="13" fill="#2ec4b6"/>
+  <path d="M142 320h192" stroke="#2ec4b6" stroke-width="8" stroke-linecap="round"/>
+  <text x="428" y="160" fill="#e5e5e5" font-family="Segoe UI, Arial, sans-serif" font-size="46" font-weight="700">cities-skylines1-agent-skill</text>
+  <text x="428" y="224" fill="#fca311" font-family="Segoe UI, Arial, sans-serif" font-size="72" font-weight="800">v0.1.0</text>
+  <text x="428" y="292" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="600">Initial API bridge, agent skill, docs, and automation release</text>
+</svg>
