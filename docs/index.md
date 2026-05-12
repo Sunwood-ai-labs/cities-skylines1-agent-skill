@@ -2,9 +2,9 @@
 layout: home
 
 hero:
-  name: Cities: Skylines 1 Agent Skill
-  text: API-driven city operations for Codex agents
-  tagline: Inspect, repair, build, zone, simulate, and save a Cities: Skylines 1 city through a local bridge instead of screen scraping.
+  name: "Cities: Skylines 1 Agent Skill"
+  text: "API-driven city operations for Codex agents"
+  tagline: "Inspect, repair, build, zone, simulate, and save a Cities: Skylines 1 city through a local bridge instead of screen scraping."
   image:
     src: /agent-bridge-icon.svg
     alt: Cities: Skylines Agent Bridge icon
