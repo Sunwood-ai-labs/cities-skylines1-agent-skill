@@ -1,0 +1,6 @@
+interface:
+  display_name: "Cities: Skylines 1 Agent"
+  short_description: "Operate CS1 cities through a local API"
+  default_prompt: "Use $cities-skylines1-agent-skill to inspect, repair, build, save, and report on my Cities: Skylines 1 city through the local API."
+policy:
+  allow_implicit_invocation: true
