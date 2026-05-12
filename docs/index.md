@@ -7,7 +7,7 @@ hero:
   tagline: "Inspect, repair, build, zone, simulate, and save a Cities: Skylines 1 city through a local bridge instead of screen scraping."
   image:
     src: /agent-bridge-icon.svg
-    alt: Cities: Skylines Agent Bridge icon
+    alt: "Cities: Skylines Agent Bridge icon"
   actions:
     - theme: brand
       text: Start the Guide

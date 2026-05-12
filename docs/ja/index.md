@@ -7,7 +7,7 @@ hero:
   tagline: "スクリーンショット認識ではなく、ローカルブリッジ経由で CS1 の都市を調査・修復・建設・ゾーン設定・保存します。"
   image:
     src: /agent-bridge-icon.svg
-    alt: Cities: Skylines Agent Bridge icon
+    alt: "Cities: Skylines Agent Bridge icon"
   actions:
     - theme: brand
       text: ガイドを読む
