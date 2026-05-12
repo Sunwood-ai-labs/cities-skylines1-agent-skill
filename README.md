@@ -27,6 +27,11 @@ The mod is intentionally small at first. Agents should usually call the focused 
 
 The HTTP server runs on `127.0.0.1:32123`. Requests that touch game state are queued and executed from the CS1 simulation update callback, so external agents do not directly mutate game objects from an arbitrary network thread.
 
+In-game API notifications are shown as a small overlay while a city is loaded.
+Each game-state API request displays a short status line such as
+`API OK: Build network Basic Road`, so the running game screen reflects what an
+agent is doing.
+
 ## Build
 
 Edit `scripts/build.ps1` if your Cities: Skylines install path differs, then run:

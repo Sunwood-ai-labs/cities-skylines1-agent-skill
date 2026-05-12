@@ -6,6 +6,12 @@ Base URL:
 http://127.0.0.1:32123
 ```
 
+While a city is loaded, every API request that touches game state also appears
+in the CS1 UI as a short overlay notification. The overlay keeps the latest few
+messages for several seconds, for example `API OK: Read city problems` or
+`API OK: Build network Basic Road`. `/health` is intentionally excluded because
+it can be called before a level exists.
+
 ## GET /health
 
 Returns bridge status without requiring a loaded city.

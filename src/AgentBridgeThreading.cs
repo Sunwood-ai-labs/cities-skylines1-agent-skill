@@ -6,7 +6,7 @@ namespace SkylinesAgentBridge
     {
         public override void OnUpdate(float realTimeDelta, float simulationTimeDelta)
         {
-            AgentBridge.Instance.ProcessGameThreadQueue();
+            AgentBridge.Instance.ProcessGameThreadQueue(realTimeDelta);
         }
     }
 }

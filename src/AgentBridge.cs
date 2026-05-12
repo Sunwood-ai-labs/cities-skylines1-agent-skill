@@ -28,6 +28,7 @@ namespace SkylinesAgentBridge
         {
             levelLoaded = true;
             EnsureServer();
+            AgentBridgeNotifier.Notify("API ready: Skylines Agent Bridge");
             Debug.Log("[SkylinesAgentBridge] Level loaded. API bridge is ready.");
         }
 
@@ -35,12 +36,14 @@ namespace SkylinesAgentBridge
         {
             levelLoaded = false;
             queue.Clear();
+            AgentBridgeNotifier.Destroy();
             Debug.Log("[SkylinesAgentBridge] Level unloading. Pending API commands cleared.");
         }
 
-        public void ProcessGameThreadQueue()
+        public void ProcessGameThreadQueue(float realTimeDelta)
         {
             queue.Process(4);
+            AgentBridgeNotifier.Update(realTimeDelta);
         }
 
         private void EnsureServer()

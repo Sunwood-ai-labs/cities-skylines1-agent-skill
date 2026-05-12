@@ -106,13 +106,13 @@ namespace SkylinesAgentBridge
 
             if (request.Method == "GET" && request.Path == "/state/summary")
             {
-                return RunOnGameThread(GameState.BuildSummaryJson);
+                return RunOnGameThread(request, GameState.BuildSummaryJson);
             }
 
             if (request.Method == "GET" && request.Path == "/state/problems")
             {
                 int limit = request.GetQueryInt("limit", 200);
-                return RunOnGameThread(delegate { return GameState.BuildProblemsJson(limit); });
+                return RunOnGameThread(request, delegate { return GameState.BuildProblemsJson(limit); });
             }
 
             if (request.Method == "GET" && request.Path == "/state/facilities")
@@ -120,14 +120,14 @@ namespace SkylinesAgentBridge
                 int limit = request.GetQueryInt("limit", 500);
                 string service = request.GetQueryString("service", "");
                 bool includeMapObjects = request.GetQueryString("includeMapObjects", "false") == "true";
-                return RunOnGameThread(delegate { return GameState.BuildFacilitiesJson(limit, service, includeMapObjects); });
+                return RunOnGameThread(request, delegate { return GameState.BuildFacilitiesJson(limit, service, includeMapObjects); });
             }
 
             if (request.Method == "GET" && request.Path == "/state/networks")
             {
                 int limit = request.GetQueryInt("limit", 500);
                 string service = request.GetQueryString("service", "");
-                return RunOnGameThread(delegate { return GameState.BuildNetworksJson(limit, service); });
+                return RunOnGameThread(request, delegate { return GameState.BuildNetworksJson(limit, service); });
             }
 
             if (request.Method == "GET" && request.Path == "/state/road-anomalies")
@@ -136,95 +136,95 @@ namespace SkylinesAgentBridge
                 float nearMissDistance = request.GetQueryFloat("nearMissDistance", 16f);
                 float shortSegmentLength = request.GetQueryFloat("shortSegmentLength", 28f);
                 bool includeDeadEnds = request.GetQueryString("includeDeadEnds", "true") == "true";
-                return RunOnGameThread(delegate { return GameState.BuildRoadAnomaliesJson(limit, nearMissDistance, shortSegmentLength, includeDeadEnds); });
+                return RunOnGameThread(request, delegate { return GameState.BuildRoadAnomaliesJson(limit, nearMissDistance, shortSegmentLength, includeDeadEnds); });
             }
 
             if (request.Method == "GET" && request.Path == "/state/building-anomalies")
             {
                 int limit = request.GetQueryInt("limit", 200);
-                return RunOnGameThread(delegate { return GameState.BuildBuildingAnomaliesJson(limit); });
+                return RunOnGameThread(request, delegate { return GameState.BuildBuildingAnomaliesJson(limit); });
             }
 
             if (request.Method == "GET" && request.Path == "/state/saves")
             {
-                return RunOnGameThread(SaveCommands.ListSaves);
+                return RunOnGameThread(request, SaveCommands.ListSaves);
             }
 
             if (request.Method == "GET" && request.Path == "/prefabs/roads")
             {
-                return RunOnGameThread(GameState.BuildRoadPrefabsJson);
+                return RunOnGameThread(request, GameState.BuildRoadPrefabsJson);
             }
 
             if (request.Method == "GET" && request.Path == "/prefabs/networks")
             {
                 string service = request.GetQueryString("service", "");
-                return RunOnGameThread(delegate { return GameState.BuildNetworkPrefabsJson(service); });
+                return RunOnGameThread(request, delegate { return GameState.BuildNetworkPrefabsJson(service); });
             }
 
             if (request.Method == "GET" && request.Path == "/prefabs/buildings")
             {
                 string service = request.GetQueryString("service", "");
-                return RunOnGameThread(delegate { return GameState.BuildBuildingPrefabsJson(service); });
+                return RunOnGameThread(request, delegate { return GameState.BuildBuildingPrefabsJson(service); });
             }
 
             if (request.Method == "POST" && request.Path == "/commands/build-road")
             {
                 string body = request.Body;
-                return RunOnGameThread(delegate { return RoadCommands.BuildRoad(body); });
+                return RunOnGameThread(request, delegate { return RoadCommands.BuildRoad(body); });
             }
 
             if (request.Method == "POST" && request.Path == "/commands/build-network")
             {
                 string body = request.Body;
-                return RunOnGameThread(delegate { return RoadCommands.BuildRoad(body); });
+                return RunOnGameThread(request, delegate { return RoadCommands.BuildRoad(body); });
             }
 
             if (request.Method == "POST" && request.Path == "/commands/set-zone")
             {
                 string body = request.Body;
-                return RunOnGameThread(delegate { return ZoneCommands.SetZone(body); });
+                return RunOnGameThread(request, delegate { return ZoneCommands.SetZone(body); });
             }
 
             if (request.Method == "POST" && request.Path == "/commands/place-building")
             {
                 string body = request.Body;
-                return RunOnGameThread(delegate { return BuildingCommands.PlaceBuilding(body); });
+                return RunOnGameThread(request, delegate { return BuildingCommands.PlaceBuilding(body); });
             }
 
             if (request.Method == "POST" && request.Path == "/commands/move-building")
             {
                 string body = request.Body;
-                return RunOnGameThread(delegate { return BuildingCommands.MoveBuilding(body); });
+                return RunOnGameThread(request, delegate { return BuildingCommands.MoveBuilding(body); });
             }
 
             if (request.Method == "POST" && request.Path == "/commands/set-simulation-speed")
             {
                 string body = request.Body;
-                return RunOnGameThread(delegate { return SimulationCommands.SetSimulationSpeed(body); });
+                return RunOnGameThread(request, delegate { return SimulationCommands.SetSimulationSpeed(body); });
             }
 
             if (request.Method == "POST" && request.Path == "/commands/bulldoze")
             {
                 string body = request.Body;
-                return RunOnGameThread(delegate { return BulldozeCommands.Bulldoze(body); });
+                return RunOnGameThread(request, delegate { return BulldozeCommands.Bulldoze(body); });
             }
 
             if (request.Method == "POST" && request.Path == "/commands/save")
             {
                 string body = request.Body;
-                return RunOnGameThread(delegate { return SaveCommands.Save(body); });
+                return RunOnGameThread(request, delegate { return SaveCommands.Save(body); });
             }
 
             if (request.Method == "POST" && request.Path == "/commands/batch")
             {
                 string body = request.Body;
-                return RunOnGameThread(delegate { return BatchCommands.Execute(body); });
+                return RunOnGameThread(request, delegate { return BatchCommands.Execute(body); });
             }
 
             return HttpResponse.Json(404, "{\"ok\":false,\"error\":\"Not found\"}");
         }
 
-        private HttpResponse RunOnGameThread(Func<CommandResult> action)
+        private HttpResponse RunOnGameThread(HttpRequest request, Func<CommandResult> action)
         {
             if (!bridge.LevelLoaded)
             {
@@ -232,7 +232,80 @@ namespace SkylinesAgentBridge
             }
 
             CommandResult result = bridge.Queue.RunSync(action, 10000);
+            bridge.Queue.RunSync(delegate
+            {
+                AgentBridgeNotifier.Notify((result.Ok ? "API OK: " : "API FAIL: ") + DescribeRequest(request));
+                return CommandResult.FromJson("{\"ok\":true}");
+            }, 10000);
             return HttpResponse.Json(result.Ok ? 200 : 500, result.Json);
+        }
+
+        private static string DescribeRequest(HttpRequest request)
+        {
+            string body = request.Body == null ? "" : request.Body;
+
+            if (request.Method == "GET")
+            {
+                if (request.Path == "/state/summary") return "Read city summary";
+                if (request.Path == "/state/problems") return "Read city problems";
+                if (request.Path == "/state/facilities") return "Read facilities";
+                if (request.Path == "/state/networks") return "Read networks";
+                if (request.Path == "/state/road-anomalies") return "Inspect road anomalies";
+                if (request.Path == "/state/building-anomalies") return "Inspect building placement";
+                if (request.Path == "/state/saves") return "List saves";
+                if (request.Path == "/prefabs/roads") return "List road prefabs";
+                if (request.Path == "/prefabs/networks") return "List network prefabs";
+                if (request.Path == "/prefabs/buildings") return "List building prefabs";
+                return "GET " + request.Path;
+            }
+
+            if (request.Path == "/commands/build-network" || request.Path == "/commands/build-road")
+            {
+                string prefab = JsonUtil.GetString(body, "roadPrefab", "network");
+                return "Build network " + prefab;
+            }
+
+            if (request.Path == "/commands/set-zone")
+            {
+                return "Set zone " + JsonUtil.GetString(body, "zone", "");
+            }
+
+            if (request.Path == "/commands/place-building")
+            {
+                return "Place building " + JsonUtil.GetString(body, "buildingPrefab", "");
+            }
+
+            if (request.Path == "/commands/move-building")
+            {
+                return "Move building #" + ((int)JsonUtil.GetNumber(body, "id", 0f)).ToString();
+            }
+
+            if (request.Path == "/commands/bulldoze")
+            {
+                string entityType = JsonUtil.GetString(body, "entityType", "entity");
+                return "Bulldoze " + entityType + " #" + ((int)JsonUtil.GetNumber(body, "id", 0f)).ToString();
+            }
+
+            if (request.Path == "/commands/save")
+            {
+                return "Save city " + JsonUtil.GetString(body, "name", "AgentAutoSave");
+            }
+
+            if (request.Path == "/commands/set-simulation-speed")
+            {
+                if (JsonUtil.GetBool(body, "paused", false))
+                {
+                    return "Pause simulation";
+                }
+                return "Set simulation speed " + ((int)JsonUtil.GetNumber(body, "speed", 0f)).ToString();
+            }
+
+            if (request.Path == "/commands/batch")
+            {
+                return "Run batch commands";
+            }
+
+            return request.Method + " " + request.Path;
         }
 
         private sealed class HttpRequest
