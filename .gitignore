@@ -1,0 +1,10 @@
+bin/
+obj/
+*.dll
+*.pdb
+*.user
+*.suo
+*.cache
+*.log
+screen-*.png
+local.props
