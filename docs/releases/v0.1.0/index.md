@@ -48,6 +48,9 @@ Additional checks run for this note:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File C:\Users\makim\.codex\skills\gh-release-notes\scripts\verify-svg-assets.ps1 -RepoPath . -Path docs/public/agent-bridge-icon.svg
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-doc-links.ps1
+npm install
+npm run build
 ```
 
 The release notes were prepared from the repository state included in the `v0.1.0` tag.

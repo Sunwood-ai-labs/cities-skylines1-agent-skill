@@ -33,4 +33,6 @@ Docs:
 
 Release-note preparation used the bundled `gh-release-notes` collector in initial release mode, inspected the key API, script, docs, and workflow files, and validated SVG release assets.
 
+Docs link validation and VitePress build were run successfully after installing Node.js/npm in the local environment.
+
 The release notes were prepared from the repository state included in the `v0.1.0` tag.

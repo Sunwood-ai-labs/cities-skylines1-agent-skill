@@ -10,7 +10,7 @@ if (!(Test-Path -LiteralPath $docs)) {
 }
 
 $files = Get-ChildItem -LiteralPath $docs -Recurse -File -Include *.md,*.mts,*.json,*.svg |
-    Where-Object { $_.FullName -notmatch "\\.vitepress\\dist\\" }
+    Where-Object { $_.FullName -notmatch "\\.vitepress\\dist\\" -and $_.FullName -notmatch "\\node_modules\\" }
 $readmes = @("README.md", "README.ja.md") |
     ForEach-Object { Join-Path $RepoPath $_ } |
     Where-Object { Test-Path -LiteralPath $_ } |

@@ -6,8 +6,8 @@
 - release tag: `v0.1.0`
 - compare range: `<none>; initial release mode`, target `HEAD`
 - requested outputs: GitHub release body draft, docs-backed release notes
-- validation commands run: `powershell -NoProfile -ExecutionPolicy Bypass -File C:\Users\makim\.codex\skills\gh-release-notes\scripts\collect-release-context.ps1 -Target HEAD`, `powershell -NoProfile -ExecutionPolicy Bypass -File C:\Users\makim\.codex\skills\gh-release-notes\scripts\verify-svg-assets.ps1 -RepoPath . -Path docs/public/agent-bridge-icon.svg,docs/public/release-header-v0.1.0.svg`, `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-doc-links.ps1`, `powershell -NoProfile -ExecutionPolicy Bypass -File C:\Users\makim\.codex\skills\gh-release-notes\scripts\verify-release-qa-inventory.ps1 -RepoPath . -Tag v0.1.0`; attempted `npm install --package-lock=false` but `npm` was unavailable on PATH
-- release URLs: pending publication; release body saved at `tmp/release-notes-v0.1.0.md`
+- validation commands run: `powershell -NoProfile -ExecutionPolicy Bypass -File C:\Users\makim\.codex\skills\gh-release-notes\scripts\collect-release-context.ps1 -Target HEAD`, `powershell -NoProfile -ExecutionPolicy Bypass -File C:\Users\makim\.codex\skills\gh-release-notes\scripts\verify-svg-assets.ps1 -RepoPath . -Path docs/public/agent-bridge-icon.svg,docs/public/release-header-v0.1.0.svg`, `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-doc-links.ps1`, `npm install`, `npm run build`, `powershell -NoProfile -ExecutionPolicy Bypass -File C:\Users\makim\.codex\skills\gh-release-notes\scripts\verify-release-qa-inventory.ps1 -RepoPath . -Tag v0.1.0`
+- release URLs: `https://github.com/Sunwood-ai-labs/cities-skylines1-agent-skill/releases/tag/v0.1.0`, `https://sunwood-ai-labs.github.io/cities-skylines1-agent-skill/releases/v0.1.0/`, `https://sunwood-ai-labs.github.io/cities-skylines1-agent-skill/ja/releases/v0.1.0/`
 
 ## Claim Matrix
 
@@ -50,12 +50,12 @@
 | claim_scope_precise | pass | Wording scopes this as an initial release for the repository state included in `v0.1.0`. |
 | latest_release_links_updated | pass | VitePress nav/sidebar now exposes `v0.1.0` release notes; no prior latest-release pointer existed. |
 | svg_assets_validated | pass | `verify-svg-assets.ps1 -RepoPath . -Path docs/public/agent-bridge-icon.svg,docs/public/release-header-v0.1.0.svg` passed. |
-| docs_assets_committed_before_tag | not_applicable | No tag creation or GitHub publication was requested or performed in this task. |
-| docs_deployed_live | not_applicable | No docs deployment was requested or performed; GitHub release body is saved as a draft. |
-| tag_local_remote | not_applicable | `v0.1.0` tag has not been created locally or remotely. |
-| github_release_verified | not_applicable | GitHub Release was not created or edited. |
-| validation_commands_recorded | pass | Release Context lists collector, SVG validation, docs link validation, QA inventory validation, and the failed docs build prerequisite attempt caused by missing `npm`. |
-| publish_date_verified | not_applicable | Draft does not hardcode a publication date because the release does not exist yet. |
+| docs_assets_committed_before_tag | pass | Release docs and header were committed in `e38a883` before creating and pushing the `v0.1.0` tag. |
+| docs_deployed_live | pass | `Invoke-WebRequest -Method Head` returned 200 for the English and Japanese release docs URLs. |
+| tag_local_remote | pass | `v0.1.0` exists locally and was pushed to `origin`; `git rev-parse "v0.1.0^{commit}"` resolved to `e38a883`. |
+| github_release_verified | pass | `gh release view v0.1.0 --json url,name,tagName,isDraft,isPrerelease,publishedAt` returned the public release URL and `isDraft=false`. |
+| validation_commands_recorded | pass | Release Context lists collector, SVG validation, docs link validation, VitePress build, and QA inventory validation. |
+| publish_date_verified | pass | `gh release view` reported `publishedAt=2026-05-12T17:10:57Z`; no hardcoded publish date was added to the release notes. |
 
 ## Notes
 
