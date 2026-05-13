@@ -30,6 +30,13 @@ $vitepressLinkPattern = 'link:\s+[''"]([^''"]+)[''"]'
 
 function Resolve-DocsLink([System.IO.FileInfo]$file, [string]$target) {
     $clean = $target.Trim().Trim('"').Trim("'")
+    if ($clean -match '^<(.+)>$') {
+        $clean = $matches[1].Trim()
+    }
+    elseif ($clean -match '[<>]') {
+        return $null
+    }
+
     if ($clean -match '^(https?:|mailto:|#)') {
         return $null
     }
@@ -46,9 +53,6 @@ function Resolve-DocsLink([System.IO.FileInfo]$file, [string]$target) {
         $clean = $clean.Split('#')[0]
     }
     if ($clean -eq '') {
-        return $null
-    }
-    if ($clean -match '[<>]') {
         return $null
     }
 
