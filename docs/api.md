@@ -169,6 +169,7 @@ Detected anomaly types:
 - `duplicateRoadSegments`: two road segments share the same pair of endpoint nodes, which usually means one should be removed.
 - `overlappingRoadSegments`: two road segments run nearly on top of each other at the same height for a meaningful distance, which usually means a duplicate or accidental overlay.
 - `roadCrossingWithoutNode`: two road segments cross at nearly the same height without sharing a node, which usually means they visually overlap but are not a real intersection.
+- `roadTerrainCliff`: a ground road has a large height mismatch against nearby sampled terrain, which can indicate buried roads or terrain spikes/cliffs caused by bad road placement.
 
 Each anomaly includes the affected node or segment IDs plus world coordinates,
 so an agent can call `/commands/bulldoze` or add a connector road without using

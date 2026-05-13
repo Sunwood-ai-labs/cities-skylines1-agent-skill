@@ -102,8 +102,8 @@ Invoke-RestMethod http://127.0.0.1:32123/state/networks?limit=1000
 ## GET /state/road-anomalies
 
 画面上は接続して見えても、CS1 の道路グラフ上は接続していない形状を検出します。
-短い不要スタブ、近接した未接続端点、同じノード間に重複した道路に加えて、同じ高さでほぼ重なっている道路や、
-同じ高さで交差しているのにノード共有していない道路も検出します。
+短い不要スタブ、近接した未接続端点、同じノード間に重複した道路に加えて、同じ高さでほぼ重なっている道路、同じ高さで交差しているのにノード共有していない道路、
+周囲地形と大きく段差がある埋没・崖化した道路も検出します。
 
 ```powershell
 Invoke-RestMethod "http://127.0.0.1:32123/state/road-anomalies?nearMissDistance=18&shortSegmentLength=32&includeDeadEnds=true"

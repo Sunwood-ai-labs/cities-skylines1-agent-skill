@@ -629,6 +629,11 @@ namespace SkylinesAgentBridge
             private const float RoadOverlapDistance = 3f;
             private const float RoadCrossingHeightTolerance = 5f;
             private const float RoadOverlapMinLength = 18f;
+            private const float RoadTerrainSideOffset = 22f;
+            private const float RoadTerrainHeightTolerance = 18f;
+            private const float RoadTerrainSideDeltaTolerance = 28f;
+            private const float RoadTerrainAdjacentDeltaTolerance = 14f;
+            private const float RoadTerrainBoundsMargin = 700f;
             private readonly int limit;
             private readonly float nearMissDistance;
             private readonly float shortSegmentLength;
@@ -673,6 +678,7 @@ namespace SkylinesAgentBridge
                 }
 
                 CollectRoadOverlapAnomalies(manager);
+                CollectRoadTerrainAnomalies(manager);
 
                 for (ushort i = 1; i < manager.m_nodes.m_buffer.Length; i++)
                 {
@@ -811,6 +817,22 @@ namespace SkylinesAgentBridge
                 }
             }
 
+            private void AddRoadTerrainCliff(ushort segmentId, NetSegment segment, float maxRoadToTerrainDelta, float maxSideToSideDelta, float maxAdjacentTerrainDelta, Vector3 samplePosition)
+            {
+                if (Begin("roadTerrainCliff"))
+                {
+                    items.Append(",\"segmentId\":").Append(segmentId);
+                    items.Append(",\"name\":\"").Append(JsonUtil.Escape(NetManager.instance.GetSegmentName(segmentId))).Append("\"");
+                    items.Append(",\"prefab\":\"").Append(JsonUtil.Escape(segment.Info.name)).Append("\"");
+                    items.Append(",\"maxRoadToTerrainDelta\":").Append(JsonUtil.Number(maxRoadToTerrainDelta));
+                    items.Append(",\"maxSideToSideDelta\":").Append(JsonUtil.Number(maxSideToSideDelta));
+                    items.Append(",\"maxAdjacentTerrainDelta\":").Append(JsonUtil.Number(maxAdjacentTerrainDelta));
+                    AppendPoint("samplePosition", samplePosition);
+                    AppendSegment("segment", segment);
+                    items.Append("}");
+                }
+            }
+
             private bool Begin(string type)
             {
                 total++;
@@ -909,6 +931,188 @@ namespace SkylinesAgentBridge
                         }
                     }
                 }
+            }
+
+            private void CollectRoadTerrainAnomalies(NetManager manager)
+            {
+                TerrainManager terrain = TerrainManager.instance;
+                if (terrain == null)
+                {
+                    return;
+                }
+
+                float minX;
+                float maxX;
+                float minZ;
+                float maxZ;
+                if (!TryGetTerrainCheckBounds(manager, out minX, out maxX, out minZ, out maxZ))
+                {
+                    return;
+                }
+
+                for (ushort i = 1; i < manager.m_segments.m_buffer.Length; i++)
+                {
+                    NetSegment segment = manager.m_segments.m_buffer[i];
+                    if (!IsCreatedRoadSegment(segment) || SkipTerrainAnomalyCheck(segment.Info))
+                    {
+                        continue;
+                    }
+
+                    Vector3 start = manager.m_nodes.m_buffer[segment.m_startNode].m_position;
+                    Vector3 end = manager.m_nodes.m_buffer[segment.m_endNode].m_position;
+                    if (!IsAgentNamedRoad(i) && !SegmentTouchesBounds(start, end, minX, maxX, minZ, maxZ))
+                    {
+                        continue;
+                    }
+
+                    Vector3 direction = end - start;
+                    direction.y = 0f;
+                    float length = Mathf.Sqrt(direction.x * direction.x + direction.z * direction.z);
+                    if (length < 24f)
+                    {
+                        continue;
+                    }
+
+                    direction.x /= length;
+                    direction.z /= length;
+                    Vector3 side = new Vector3(-direction.z, 0f, direction.x);
+
+                    float maxRoadToTerrainDelta = 0f;
+                    float maxSideToSideDelta = 0f;
+                    float maxAdjacentTerrainDelta = 0f;
+                    Vector3 worstPoint = segment.m_middlePosition;
+
+                    for (int sample = 1; sample <= 3; sample++)
+                    {
+                        float t = sample * 0.25f;
+                        Vector3 center = Vector3.Lerp(start, end, t);
+                        float roadY = Mathf.Lerp(start.y, end.y, t);
+                        float leftY = SampleRoadSideTerrain(terrain, center, side, 1f, roadY, ref maxRoadToTerrainDelta, ref maxAdjacentTerrainDelta);
+                        float rightY = SampleRoadSideTerrain(terrain, center, side, -1f, roadY, ref maxRoadToTerrainDelta, ref maxAdjacentTerrainDelta);
+                        float sideDelta = Mathf.Abs(leftY - rightY);
+
+                        if (sideDelta > maxSideToSideDelta)
+                        {
+                            maxSideToSideDelta = sideDelta;
+                            worstPoint = center;
+                        }
+                    }
+
+                    if (IsLongGroundOutsideConnector(i, segment, length))
+                    {
+                        maxRoadToTerrainDelta = Mathf.Max(maxRoadToTerrainDelta, RoadTerrainHeightTolerance);
+                    }
+
+                    if (maxRoadToTerrainDelta >= RoadTerrainHeightTolerance ||
+                        maxSideToSideDelta >= RoadTerrainSideDeltaTolerance ||
+                        maxAdjacentTerrainDelta >= RoadTerrainAdjacentDeltaTolerance)
+                    {
+                        AddRoadTerrainCliff(i, segment, maxRoadToTerrainDelta, maxSideToSideDelta, maxAdjacentTerrainDelta, worstPoint);
+                    }
+                }
+            }
+
+            private static float SampleRoadSideTerrain(TerrainManager terrain, Vector3 center, Vector3 side, float sideSign, float roadY, ref float maxRoadToTerrainDelta, ref float maxAdjacentTerrainDelta)
+            {
+                float previousY = roadY;
+                float lastY = roadY;
+                float[] offsets = new float[] { 8f, RoadTerrainSideOffset, 44f, 66f, 96f };
+                for (int i = 0; i < offsets.Length; i++)
+                {
+                    Vector3 sample = center + side * (offsets[i] * sideSign);
+                    float terrainY = terrain.SampleRawHeightSmoothWithWater(sample, false, 0f);
+                    maxRoadToTerrainDelta = Mathf.Max(maxRoadToTerrainDelta, Mathf.Abs(roadY - terrainY));
+                    maxAdjacentTerrainDelta = Mathf.Max(maxAdjacentTerrainDelta, Mathf.Abs(previousY - terrainY));
+                    previousY = terrainY;
+                    lastY = terrainY;
+                }
+                return lastY;
+            }
+
+            private static bool TryGetTerrainCheckBounds(NetManager manager, out float minX, out float maxX, out float minZ, out float maxZ)
+            {
+                minX = float.MaxValue;
+                maxX = float.MinValue;
+                minZ = float.MaxValue;
+                maxZ = float.MinValue;
+                bool found = false;
+
+                for (ushort i = 1; i < manager.m_segments.m_buffer.Length; i++)
+                {
+                    NetSegment segment = manager.m_segments.m_buffer[i];
+                    if (!IsCreatedRoadSegment(segment) || !ContributesToTerrainCheckBounds(i, segment))
+                    {
+                        continue;
+                    }
+
+                    Vector3 start = manager.m_nodes.m_buffer[segment.m_startNode].m_position;
+                    Vector3 end = manager.m_nodes.m_buffer[segment.m_endNode].m_position;
+                    ExpandBounds(start, ref minX, ref maxX, ref minZ, ref maxZ);
+                    ExpandBounds(end, ref minX, ref maxX, ref minZ, ref maxZ);
+                    found = true;
+                }
+
+                if (!found)
+                {
+                    return false;
+                }
+
+                minX -= RoadTerrainBoundsMargin;
+                maxX += RoadTerrainBoundsMargin;
+                minZ -= RoadTerrainBoundsMargin;
+                maxZ += RoadTerrainBoundsMargin;
+                return true;
+            }
+
+            private static void ExpandBounds(Vector3 point, ref float minX, ref float maxX, ref float minZ, ref float maxZ)
+            {
+                minX = Mathf.Min(minX, point.x);
+                maxX = Mathf.Max(maxX, point.x);
+                minZ = Mathf.Min(minZ, point.z);
+                maxZ = Mathf.Max(maxZ, point.z);
+            }
+
+            private static bool SegmentTouchesBounds(Vector3 start, Vector3 end, float minX, float maxX, float minZ, float maxZ)
+            {
+                float segmentMinX = Mathf.Min(start.x, end.x);
+                float segmentMaxX = Mathf.Max(start.x, end.x);
+                float segmentMinZ = Mathf.Min(start.z, end.z);
+                float segmentMaxZ = Mathf.Max(start.z, end.z);
+                return segmentMaxX >= minX && segmentMinX <= maxX && segmentMaxZ >= minZ && segmentMinZ <= maxZ;
+            }
+
+            private static bool ContributesToTerrainCheckBounds(ushort segmentId, NetSegment segment)
+            {
+                if (IsAgentNamedRoad(segmentId))
+                {
+                    return true;
+                }
+
+                string prefab = segment.Info == null || segment.Info.name == null ? "" : segment.Info.name;
+                return !ContainsIgnoreCase(prefab, "Highway");
+            }
+
+            private static bool IsAgentNamedRoad(ushort segmentId)
+            {
+                string name = NetManager.instance.GetSegmentName(segmentId);
+                return ContainsIgnoreCase(name, "Agent");
+            }
+
+            private static bool IsLongGroundOutsideConnector(ushort segmentId, NetSegment segment, float length)
+            {
+                if (length < 140f || segment.Info == null)
+                {
+                    return false;
+                }
+
+                string prefab = segment.Info.name == null ? "" : segment.Info.name;
+                if (ContainsIgnoreCase(prefab, "Elevated") || ContainsIgnoreCase(prefab, "Bridge") || ContainsIgnoreCase(prefab, "Tunnel") || ContainsIgnoreCase(prefab, "Slope"))
+                {
+                    return false;
+                }
+
+                string name = NetManager.instance.GetSegmentName(segmentId);
+                return ContainsIgnoreCase(name, "Agent") && ContainsIgnoreCase(name, "Outside");
             }
 
             private static void FindNearestRoadSegment(NetManager manager, ushort nodeId, Vector3 point, ushort ownSegment, out ushort nearestSegment, out float distance)
@@ -1108,6 +1312,29 @@ namespace SkylinesAgentBridge
             {
                 return (a.m_startNode == b.m_startNode && a.m_endNode == b.m_endNode) ||
                     (a.m_startNode == b.m_endNode && a.m_endNode == b.m_startNode);
+            }
+
+            private static bool SkipTerrainAnomalyCheck(NetInfo info)
+            {
+                if (info == null)
+                {
+                    return true;
+                }
+
+                string name = info.name == null ? "" : info.name;
+                string aiName = info.m_netAI == null ? "" : info.m_netAI.GetType().Name;
+                return ContainsIgnoreCase(name, "Elevated") ||
+                    ContainsIgnoreCase(name, "Bridge") ||
+                    ContainsIgnoreCase(name, "Tunnel") ||
+                    ContainsIgnoreCase(name, "Slope") ||
+                    ContainsIgnoreCase(aiName, "Elevated") ||
+                    ContainsIgnoreCase(aiName, "Bridge") ||
+                    ContainsIgnoreCase(aiName, "Tunnel");
+            }
+
+            private static bool ContainsIgnoreCase(string text, string value)
+            {
+                return text != null && text.IndexOf(value, System.StringComparison.OrdinalIgnoreCase) >= 0;
             }
 
             private static ushort GetSegmentId(NetNode node, int index)
