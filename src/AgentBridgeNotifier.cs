@@ -23,6 +23,9 @@ namespace SkylinesAgentBridge
         private static UIButton minimizeButton;
         private static UIButton clearButton;
         private static bool minimized;
+        private static bool dragging;
+        private static Vector3 lastMousePosition;
+        private static Vector3 savedPanelPosition = new Vector3(18f, 92f);
 
         public static void Notify(string text)
         {
@@ -45,6 +48,7 @@ namespace SkylinesAgentBridge
         public static void Update(float realTimeDelta)
         {
             EnsurePanel();
+            UpdateDrag();
         }
 
         public static void Destroy()
@@ -86,8 +90,9 @@ namespace SkylinesAgentBridge
             panel.color = new Color32(32, 38, 44, 220);
             panel.width = 560f;
             panel.height = 230f;
-            panel.relativePosition = new Vector3(18f, 92f);
+            panel.relativePosition = savedPanelPosition;
             panel.isVisible = true;
+            RegisterDragEvents(panel);
 
             titleLabel = panel.AddUIComponent(typeof(UILabel)) as UILabel;
             if (titleLabel == null)
@@ -103,6 +108,7 @@ namespace SkylinesAgentBridge
             titleLabel.width = 390f;
             titleLabel.height = 24f;
             titleLabel.relativePosition = new Vector3(10f, 8f);
+            RegisterDragEvents(titleLabel);
 
             minimizeButton = CreateButton("SkylinesAgentBridgeNotifierMinimize", "_", 470f);
             if (minimizeButton != null)
@@ -168,6 +174,71 @@ namespace SkylinesAgentBridge
             button.height = 22f;
             button.relativePosition = new Vector3(x, 6f);
             return button;
+        }
+
+        private static void RegisterDragEvents(UIComponent component)
+        {
+            if (component == null)
+            {
+                return;
+            }
+
+            component.eventMouseDown += delegate(UIComponent sender, UIMouseEventParameter eventParam)
+            {
+                dragging = true;
+                lastMousePosition = Input.mousePosition;
+            };
+
+            component.eventMouseUp += delegate(UIComponent sender, UIMouseEventParameter eventParam)
+            {
+                dragging = false;
+            };
+        }
+
+        private static void UpdateDrag()
+        {
+            if (!dragging)
+            {
+                return;
+            }
+
+            if (!Input.GetMouseButton(0))
+            {
+                dragging = false;
+                return;
+            }
+
+            if (panel == null)
+            {
+                return;
+            }
+
+            Vector3 mousePosition = Input.mousePosition;
+            Vector3 delta = mousePosition - lastMousePosition;
+            lastMousePosition = mousePosition;
+
+            if (delta.sqrMagnitude <= 0f)
+            {
+                return;
+            }
+
+            panel.relativePosition = ClampPanelPosition(panel.relativePosition + new Vector3(delta.x, -delta.y, 0f));
+            savedPanelPosition = panel.relativePosition;
+        }
+
+        private static Vector3 ClampPanelPosition(Vector3 position)
+        {
+            UIView view = UIView.GetAView();
+            if (view == null || panel == null)
+            {
+                return position;
+            }
+
+            float maxX = Mathf.Max(0f, view.fixedWidth - panel.width);
+            float maxY = Mathf.Max(0f, view.fixedHeight - panel.height);
+            position.x = Mathf.Clamp(position.x, 0f, maxX);
+            position.y = Mathf.Clamp(position.y, 0f, maxY);
+            return position;
         }
 
         private static void Refresh()
