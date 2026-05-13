@@ -31,15 +31,15 @@
 - CS1 MODとして `http://127.0.0.1:32123` にローカル HTTP API を立てます。
 - 問題アイコン、施設、道路/水道/暖房/電線、道路異常、建物配置異常、セーブ、Prefab を API で取得できます。
 - 道路/配管/電線作成、ゾーン設定、建物配置、建物移動、削除、速度変更、保存、簡易バッチを API で実行できます。
-- API が実行されるたび、ゲーム画面左上に「何をしたか」の通知を表示します。
+- API 実行履歴をゲーム内コンソールに残し、timestamp、clear、minimize 操作を提供します。
 - ビルド、Resume 起動、新規マップ起動、都市検査、限定修復、保存用の Windows PowerShell スクリプトを含みます。
 - [SKILL.md](SKILL.md) と [agents/openai.yaml](agents/openai.yaml) により Codex Skill として使えます。
 
 ## 🖼️ スクリーンショット
 
-### API通知
+### APIコンソール
 
-ゲーム状態に触る API を叩くと、CS1 画面上に数秒だけ通知が出ます。
+ゲーム状態に触る API を叩くと、CS1 画面上のコンパクトなコンソールに実行履歴が残ります。
 
 ![API通知](docs/assets/api-notification.jpg)
 

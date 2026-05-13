@@ -31,15 +31,15 @@ The goal is simple: stop relying on screenshots for city state. The bridge expos
 - Runs a CS1 mod that listens on `http://127.0.0.1:32123`.
 - Exposes city state APIs for problems, facilities, networks, road anomalies, building placement anomalies, saves, and prefabs.
 - Exposes focused command APIs for network creation, zoning, building placement, building movement, bulldozing, simulation speed, batch helpers, and saving.
-- Shows in-game API activity notifications so the CS1 screen reflects what the agent is doing.
+- Shows in-game API activity in a persistent console with timestamps, clear, and minimize controls.
 - Includes Windows scripts for building the mod, launching Resume, starting a fresh map, inspecting issues, repairing bounded anomalies, and saving.
 - Ships as a Codex skill through [SKILL.md](SKILL.md) and [agents/openai.yaml](agents/openai.yaml).
 
 ## 🖼️ Screenshot Tour
 
-### In-Game API Notifications
+### In-Game API Console
 
-Every game-state API request appears in the CS1 UI for a few seconds.
+Every game-state API request is appended to a compact CS1 UI console, so recent agent activity stays visible while you work.
 
 ![API notification overlay](docs/assets/api-notification.jpg)
 
