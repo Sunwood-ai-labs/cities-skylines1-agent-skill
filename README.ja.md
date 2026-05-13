@@ -12,7 +12,7 @@
   <a href="README.md">English README</a> ·
   <a href="https://sunwood-ai-labs.github.io/cities-skylines1-agent-skill/ja/">Docs 日本語</a> ·
   <a href="docs/ja/api.md">APIリファレンス</a> ·
-  <a href="CONTRIBUTING.md">Contributing</a>
+  <a href="CONTRIBUTING.ja.md">コントリビュート</a>
 </p>
 
 <p align="center">
@@ -75,7 +75,7 @@ Invoke-RestMethod http://127.0.0.1:32123/health
 Invoke-RestMethod http://127.0.0.1:32123/state/summary
 ```
 
-開発では軽量な Git Flow を使います。通常の機能ブランチは `develop` に向け、リリースとホットフィックスは `main` に向けます。ブランチ運用と AI レビューの流れは [CONTRIBUTING.md](CONTRIBUTING.md) を参照してください。
+開発では軽量な Git Flow を使います。通常の機能ブランチは `develop` に向け、リリースとホットフィックスは `main` に向けます。ブランチ運用と AI レビューの流れは [CONTRIBUTING.ja.md](CONTRIBUTING.ja.md) を参照してください。
 
 通常のエージェントループでは、最新セーブを Resume します。
 

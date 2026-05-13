@@ -16,7 +16,7 @@ $files = Get-ChildItem -LiteralPath $docs -Recurse -File |
         $_.FullName -notmatch "\\.vitepress\\dist\\" -and
         $_.FullName -notmatch "\\node_modules\\"
     }
-$readmes = @("README.md", "README.ja.md", "CONTRIBUTING.md") |
+$readmes = @("README.md", "README.ja.md", "CONTRIBUTING.md", "CONTRIBUTING.ja.md") |
     ForEach-Object { Join-Path $RepoPath $_ } |
     Where-Object { Test-Path -LiteralPath $_ } |
     ForEach-Object { Get-Item -LiteralPath $_ }

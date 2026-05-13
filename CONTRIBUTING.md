@@ -1,5 +1,7 @@
 # Contributing
 
+[日本語](CONTRIBUTING.ja.md)
+
 This repository uses a lightweight Git Flow model so CS1 mod changes, API surface changes, scripts, and documentation can be reviewed before they reach a release branch.
 
 ## Branch Model
