@@ -115,15 +115,7 @@ namespace SkylinesAgentBridge
                 }
 
                 createdBlocks++;
-                int rows = block.RowCount;
-                if (rows <= 0)
-                {
-                    rows = 4;
-                }
-                if (rows > 8)
-                {
-                    rows = 8;
-                }
+                int rows = ZoneHelpers.GetRowCount(block);
 
                 for (int z = 0; z < rows; z++)
                 {
@@ -906,15 +898,7 @@ namespace SkylinesAgentBridge
 
             private void AnalyzeBlock(ushort blockId, ZoneBlock block)
             {
-                int rows = block.RowCount;
-                if (rows <= 0)
-                {
-                    rows = 4;
-                }
-                if (rows > 8)
-                {
-                    rows = 8;
-                }
+                int rows = ZoneHelpers.GetRowCount(block);
 
                 int cellCount = rows * 4;
                 int unzonedCells = 0;
@@ -1160,15 +1144,7 @@ namespace SkylinesAgentBridge
                     MinZ = Mathf.Min(MinZ, block.m_position.z);
                     MaxZ = Mathf.Max(MaxZ, block.m_position.z);
 
-                    int rows = block.RowCount;
-                    if (rows <= 0)
-                    {
-                        rows = 4;
-                    }
-                    if (rows > 8)
-                    {
-                        rows = 8;
-                    }
+                    int rows = ZoneHelpers.GetRowCount(block);
 
                     for (int z = 0; z < rows; z++)
                     {
@@ -1396,6 +1372,7 @@ namespace SkylinesAgentBridge
             private const float RoadTerrainAdjacentDeltaTolerance = 14f;
             private const float RoadTerrainBoundsMargin = 700f;
             private const float RoadBelowLocalGradeTolerance = 24f;
+            private const float RoadOverlapGridSize = 96f;
             private readonly int limit;
             private readonly float nearMissDistance;
             private readonly float shortSegmentLength;
@@ -1659,55 +1636,143 @@ namespace SkylinesAgentBridge
 
             private void CollectRoadOverlapAnomalies(NetManager manager)
             {
-                for (ushort a = 1; a < manager.m_segments.m_buffer.Length; a++)
+                System.Collections.Generic.List<RoadSegmentCandidate> segments = new System.Collections.Generic.List<RoadSegmentCandidate>();
+                System.Collections.Generic.Dictionary<long, System.Collections.Generic.List<int>> grid = new System.Collections.Generic.Dictionary<long, System.Collections.Generic.List<int>>();
+
+                for (ushort id = 1; id < manager.m_segments.m_buffer.Length; id++)
                 {
-                    NetSegment segmentA = manager.m_segments.m_buffer[a];
-                    if (!IsCreatedRoadSegment(segmentA))
+                    NetSegment segment = manager.m_segments.m_buffer[id];
+                    if (!IsCreatedRoadSegment(segment))
                     {
                         continue;
                     }
 
-                    Vector3 aStart = manager.m_nodes.m_buffer[segmentA.m_startNode].m_position;
-                    Vector3 aEnd = manager.m_nodes.m_buffer[segmentA.m_endNode].m_position;
+                    RoadSegmentCandidate candidate = new RoadSegmentCandidate(id, segment, manager);
+                    int index = segments.Count;
+                    segments.Add(candidate);
+                    AddToOverlapGrid(grid, candidate, index);
+                }
 
-                    for (ushort b = (ushort)(a + 1); b < manager.m_segments.m_buffer.Length; b++)
+                System.Collections.Generic.HashSet<long> checkedPairs = new System.Collections.Generic.HashSet<long>();
+                for (int a = 0; a < segments.Count; a++)
+                {
+                    RoadSegmentCandidate segmentA = segments[a];
+                    int minX = GridIndex(segmentA.MinX);
+                    int maxX = GridIndex(segmentA.MaxX);
+                    int minZ = GridIndex(segmentA.MinZ);
+                    int maxZ = GridIndex(segmentA.MaxZ);
+
+                    for (int x = minX; x <= maxX; x++)
                     {
-                        NetSegment segmentB = manager.m_segments.m_buffer[b];
-                        if (!IsCreatedRoadSegment(segmentB))
+                        for (int z = minZ; z <= maxZ; z++)
                         {
-                            continue;
-                        }
+                            System.Collections.Generic.List<int> bucket;
+                            if (!grid.TryGetValue(CellKey(x, z), out bucket))
+                            {
+                                continue;
+                            }
 
-                        if (SameEndpoints(segmentA, segmentB))
-                        {
-                            AddDuplicateRoadSegments(a, b, segmentA, segmentB);
-                            continue;
-                        }
+                            for (int i = 0; i < bucket.Count; i++)
+                            {
+                                int b = bucket[i];
+                                if (b <= a)
+                                {
+                                    continue;
+                                }
 
-                        if (SharesNode(segmentA, segmentB))
-                        {
-                            continue;
-                        }
+                                RoadSegmentCandidate segmentB = segments[b];
+                                if (!BoundsOverlap(segmentA, segmentB))
+                                {
+                                    continue;
+                                }
 
-                        Vector3 bStart = manager.m_nodes.m_buffer[segmentB.m_startNode].m_position;
-                        Vector3 bEnd = manager.m_nodes.m_buffer[segmentB.m_endNode].m_position;
+                                long pairKey = PairKey(segmentA.Id, segmentB.Id);
+                                if (checkedPairs.Contains(pairKey))
+                                {
+                                    continue;
+                                }
+                                checkedPairs.Add(pairKey);
 
-                        Vector3 crossing;
-                        float heightDifference;
-                        if (SegmentsCrossWithoutNode(aStart, aEnd, bStart, bEnd, out crossing, out heightDifference))
-                        {
-                            AddCrossingRoadWithoutNode(a, b, segmentA, segmentB, crossing, heightDifference);
-                            continue;
-                        }
-
-                        float distance;
-                        float overlapLength;
-                        if (SegmentsOverlap(aStart, aEnd, bStart, bEnd, out distance, out overlapLength))
-                        {
-                            AddOverlappingRoadSegments(a, b, segmentA, segmentB, distance, overlapLength);
+                                AddRoadPairAnomaly(segmentA, segmentB);
+                            }
                         }
                     }
                 }
+            }
+
+            private void AddRoadPairAnomaly(RoadSegmentCandidate segmentA, RoadSegmentCandidate segmentB)
+            {
+                if (SameEndpoints(segmentA.Segment, segmentB.Segment))
+                {
+                    AddDuplicateRoadSegments(segmentA.Id, segmentB.Id, segmentA.Segment, segmentB.Segment);
+                    return;
+                }
+
+                if (SharesNode(segmentA.Segment, segmentB.Segment))
+                {
+                    return;
+                }
+
+                Vector3 crossing;
+                float heightDifference;
+                if (SegmentsCrossWithoutNode(segmentA.Start, segmentA.End, segmentB.Start, segmentB.End, out crossing, out heightDifference))
+                {
+                    AddCrossingRoadWithoutNode(segmentA.Id, segmentB.Id, segmentA.Segment, segmentB.Segment, crossing, heightDifference);
+                    return;
+                }
+
+                float distance;
+                float overlapLength;
+                if (SegmentsOverlap(segmentA.Start, segmentA.End, segmentB.Start, segmentB.End, out distance, out overlapLength))
+                {
+                    AddOverlappingRoadSegments(segmentA.Id, segmentB.Id, segmentA.Segment, segmentB.Segment, distance, overlapLength);
+                }
+            }
+
+            private static void AddToOverlapGrid(System.Collections.Generic.Dictionary<long, System.Collections.Generic.List<int>> grid, RoadSegmentCandidate segment, int index)
+            {
+                int minX = GridIndex(segment.MinX);
+                int maxX = GridIndex(segment.MaxX);
+                int minZ = GridIndex(segment.MinZ);
+                int maxZ = GridIndex(segment.MaxZ);
+
+                for (int x = minX; x <= maxX; x++)
+                {
+                    for (int z = minZ; z <= maxZ; z++)
+                    {
+                        long key = CellKey(x, z);
+                        System.Collections.Generic.List<int> bucket;
+                        if (!grid.TryGetValue(key, out bucket))
+                        {
+                            bucket = new System.Collections.Generic.List<int>();
+                            grid[key] = bucket;
+                        }
+                        bucket.Add(index);
+                    }
+                }
+            }
+
+            private static bool BoundsOverlap(RoadSegmentCandidate a, RoadSegmentCandidate b)
+            {
+                return a.MaxX >= b.MinX && a.MinX <= b.MaxX &&
+                    a.MaxZ >= b.MinZ && a.MinZ <= b.MaxZ;
+            }
+
+            private static int GridIndex(float value)
+            {
+                return Mathf.FloorToInt(value / RoadOverlapGridSize);
+            }
+
+            private static long CellKey(int x, int z)
+            {
+                return ((long)x << 32) ^ (uint)z;
+            }
+
+            private static long PairKey(ushort a, ushort b)
+            {
+                ushort min = a < b ? a : b;
+                ushort max = a < b ? b : a;
+                return ((long)min << 32) | (uint)max;
             }
 
             private void CollectRoadTerrainAnomalies(NetManager manager)
@@ -1810,7 +1875,7 @@ namespace SkylinesAgentBridge
                     }
 
                     string name = NetManager.instance.GetSegmentName(i);
-                    if (ContainsIgnoreCase(name, "Outside") || ContainsIgnoreCase(name, "Highway Connector"))
+                    if (StringUtil.ContainsIgnoreCase(name, "Outside") || StringUtil.ContainsIgnoreCase(name, "Highway Connector"))
                     {
                         continue;
                     }
@@ -1901,13 +1966,13 @@ namespace SkylinesAgentBridge
                 }
 
                 string prefab = segment.Info == null || segment.Info.name == null ? "" : segment.Info.name;
-                return !ContainsIgnoreCase(prefab, "Highway");
+                return !StringUtil.ContainsIgnoreCase(prefab, "Highway");
             }
 
             private static bool IsAgentNamedRoad(ushort segmentId)
             {
                 string name = NetManager.instance.GetSegmentName(segmentId);
-                return ContainsIgnoreCase(name, "Agent");
+                return StringUtil.ContainsIgnoreCase(name, "Agent");
             }
 
             private static bool IsLongGroundOutsideConnector(ushort segmentId, NetSegment segment, float length)
@@ -1918,13 +1983,13 @@ namespace SkylinesAgentBridge
                 }
 
                 string prefab = segment.Info.name == null ? "" : segment.Info.name;
-                if (ContainsIgnoreCase(prefab, "Elevated") || ContainsIgnoreCase(prefab, "Bridge") || ContainsIgnoreCase(prefab, "Tunnel") || ContainsIgnoreCase(prefab, "Slope"))
+                if (StringUtil.ContainsIgnoreCase(prefab, "Elevated") || StringUtil.ContainsIgnoreCase(prefab, "Bridge") || StringUtil.ContainsIgnoreCase(prefab, "Tunnel") || StringUtil.ContainsIgnoreCase(prefab, "Slope"))
                 {
                     return false;
                 }
 
                 string name = NetManager.instance.GetSegmentName(segmentId);
-                return ContainsIgnoreCase(name, "Agent") && ContainsIgnoreCase(name, "Outside");
+                return StringUtil.ContainsIgnoreCase(name, "Agent") && StringUtil.ContainsIgnoreCase(name, "Outside");
             }
 
             private static void FindNearestRoadSegment(NetManager manager, ushort nodeId, Vector3 point, ushort ownSegment, out ushort nearestSegment, out float distance)
@@ -2135,18 +2200,13 @@ namespace SkylinesAgentBridge
 
                 string name = info.name == null ? "" : info.name;
                 string aiName = info.m_netAI == null ? "" : info.m_netAI.GetType().Name;
-                return ContainsIgnoreCase(name, "Elevated") ||
-                    ContainsIgnoreCase(name, "Bridge") ||
-                    ContainsIgnoreCase(name, "Tunnel") ||
-                    ContainsIgnoreCase(name, "Slope") ||
-                    ContainsIgnoreCase(aiName, "Elevated") ||
-                    ContainsIgnoreCase(aiName, "Bridge") ||
-                    ContainsIgnoreCase(aiName, "Tunnel");
-            }
-
-            private static bool ContainsIgnoreCase(string text, string value)
-            {
-                return text != null && text.IndexOf(value, System.StringComparison.OrdinalIgnoreCase) >= 0;
+                return StringUtil.ContainsIgnoreCase(name, "Elevated") ||
+                    StringUtil.ContainsIgnoreCase(name, "Bridge") ||
+                    StringUtil.ContainsIgnoreCase(name, "Tunnel") ||
+                    StringUtil.ContainsIgnoreCase(name, "Slope") ||
+                    StringUtil.ContainsIgnoreCase(aiName, "Elevated") ||
+                    StringUtil.ContainsIgnoreCase(aiName, "Bridge") ||
+                    StringUtil.ContainsIgnoreCase(aiName, "Tunnel");
             }
 
             private static ushort GetSegmentId(NetNode node, int index)
@@ -2169,6 +2229,30 @@ namespace SkylinesAgentBridge
             private static bool IsRoadInfo(NetInfo info)
             {
                 return info != null && info.m_class != null && info.m_class.m_service == ItemClass.Service.Road;
+            }
+
+            private struct RoadSegmentCandidate
+            {
+                public readonly ushort Id;
+                public readonly NetSegment Segment;
+                public readonly Vector3 Start;
+                public readonly Vector3 End;
+                public readonly float MinX;
+                public readonly float MaxX;
+                public readonly float MinZ;
+                public readonly float MaxZ;
+
+                public RoadSegmentCandidate(ushort id, NetSegment segment, NetManager manager)
+                {
+                    Id = id;
+                    Segment = segment;
+                    Start = manager.m_nodes.m_buffer[segment.m_startNode].m_position;
+                    End = manager.m_nodes.m_buffer[segment.m_endNode].m_position;
+                    MinX = Mathf.Min(Start.x, End.x) - RoadOverlapDistance;
+                    MaxX = Mathf.Max(Start.x, End.x) + RoadOverlapDistance;
+                    MinZ = Mathf.Min(Start.z, End.z) - RoadOverlapDistance;
+                    MaxZ = Mathf.Max(Start.z, End.z) + RoadOverlapDistance;
+                }
             }
         }
 
@@ -2285,11 +2369,11 @@ namespace SkylinesAgentBridge
                     {
                         stats.SampleName = name;
                     }
-                    if (ContainsIgnoreCase(name, "Agent"))
+                    if (StringUtil.ContainsIgnoreCase(name, "Agent"))
                     {
                         stats.AgentNamedSegments++;
                     }
-                    if (!ContainsIgnoreCase(prefab, "Highway"))
+                    if (!StringUtil.ContainsIgnoreCase(prefab, "Highway"))
                     {
                         stats.NonHighwaySegments++;
                     }
@@ -2380,7 +2464,7 @@ namespace SkylinesAgentBridge
                 }
 
                 string flags = node.m_flags.ToString();
-                if (ContainsIgnoreCase(flags, "Outside"))
+                if (StringUtil.ContainsIgnoreCase(flags, "Outside"))
                 {
                     return true;
                 }
@@ -2399,11 +2483,6 @@ namespace SkylinesAgentBridge
                 if (index == 5) return node.m_segment5;
                 if (index == 6) return node.m_segment6;
                 return node.m_segment7;
-            }
-
-            private static bool ContainsIgnoreCase(string text, string value)
-            {
-                return text != null && text.IndexOf(value, System.StringComparison.OrdinalIgnoreCase) >= 0;
             }
 
             private sealed class ComponentStats

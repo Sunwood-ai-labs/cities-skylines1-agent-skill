@@ -11,7 +11,7 @@ namespace SkylinesAgentBridge
 
         public static bool IsBlockedBuildingPrefabName(string prefabName)
         {
-            return ContainsIgnoreCase(prefabName, "Block Services -");
+            return StringUtil.ContainsIgnoreCase(prefabName, "Block Services -");
         }
 
         public static bool IsBlockedPackageAsset(Package.Asset asset)
@@ -33,11 +33,6 @@ namespace SkylinesAgentBridge
                 return "Blocked broken asset family: Block Services";
             }
             return "";
-        }
-
-        private static bool ContainsIgnoreCase(string text, string value)
-        {
-            return text != null && text.IndexOf(value, System.StringComparison.OrdinalIgnoreCase) >= 0;
         }
     }
 }
