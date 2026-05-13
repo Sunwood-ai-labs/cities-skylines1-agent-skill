@@ -14,7 +14,8 @@ namespace SkylinesAgentBridge
         }
 
         private const int MaxEntries = 120;
-        private const int VisibleEntries = 12;
+        private const int VisibleEntries = 9;
+        private const int MaxLineLength = 78;
         private static readonly List<Entry> entries = new List<Entry>();
         private static UIPanel panel;
         private static UILabel titleLabel;
@@ -130,12 +131,12 @@ namespace SkylinesAgentBridge
             }
 
             label.name = "SkylinesAgentBridgeNotifierLabel";
-            label.textScale = 0.86f;
+            label.textScale = 0.78f;
             label.textColor = new Color32(235, 245, 255, 255);
             label.padding = new RectOffset(10, 10, 4, 8);
             label.autoSize = false;
             label.width = 540f;
-            label.height = 186f;
+            label.height = 176f;
             label.wordWrap = false;
             label.relativePosition = new Vector3(0f, 34f);
 
@@ -188,7 +189,7 @@ namespace SkylinesAgentBridge
             }
 
             panel.height = 230f;
-            titleLabel.text = "Skylines Agent Bridge API Console (" + entries.Count + ")";
+            titleLabel.text = "Skylines Agent Bridge API Console (" + entries.Count + ", latest)";
             label.isVisible = true;
 
             if (entries.Count == 0)
@@ -198,21 +199,30 @@ namespace SkylinesAgentBridge
             }
 
             string text = "";
-            int start = entries.Count - VisibleEntries;
-            if (start < 0)
+            int stop = entries.Count - VisibleEntries;
+            if (stop < 0)
             {
-                start = 0;
+                stop = 0;
             }
 
-            for (int i = start; i < entries.Count; i++)
+            for (int i = entries.Count - 1; i >= stop; i--)
             {
-                if (i > start)
+                if (i < entries.Count - 1)
                 {
                     text += "\n";
                 }
-                text += "[" + entries[i].Time + "] " + entries[i].Text;
+                text += TrimLine("[" + entries[i].Time + "] " + entries[i].Text);
             }
             label.text = text;
+        }
+
+        private static string TrimLine(string text)
+        {
+            if (text == null || text.Length <= MaxLineLength)
+            {
+                return text;
+            }
+            return text.Substring(0, MaxLineLength - 3) + "...";
         }
     }
 }

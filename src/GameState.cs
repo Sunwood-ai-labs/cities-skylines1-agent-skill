@@ -359,6 +359,7 @@ namespace SkylinesAgentBridge
                 Vector3 end = manager.m_nodes.m_buffer[endNodeId].m_position;
                 Vector3 middle = segment.m_middlePosition;
                 string problems = segment.m_problems.IsNone ? "" : segment.m_problems.ToString();
+                string segmentName = manager.GetSegmentName(i);
 
                 if (!firstItem)
                 {
@@ -367,6 +368,7 @@ namespace SkylinesAgentBridge
 
                 items.Append("{\"id\":").Append(i);
                 items.Append(",\"prefab\":\"").Append(JsonUtil.Escape(info.name)).Append("\"");
+                items.Append(",\"name\":\"").Append(JsonUtil.Escape(segmentName)).Append("\"");
                 items.Append(",\"displayName\":\"").Append(JsonUtil.Escape(info.GetUncheckedLocalizedTitle())).Append("\"");
                 items.Append(",\"service\":\"").Append(JsonUtil.Escape(service)).Append("\"");
                 items.Append(",\"subService\":\"").Append(JsonUtil.Escape(info.m_class.m_subService.ToString())).Append("\"");
@@ -795,6 +797,20 @@ namespace SkylinesAgentBridge
                 }
             }
 
+            private void AddDuplicateRoadSegments(ushort segmentAId, ushort segmentBId, NetSegment segmentA, NetSegment segmentB)
+            {
+                if (Begin("duplicateRoadSegments"))
+                {
+                    items.Append(",\"segmentAId\":").Append(segmentAId);
+                    items.Append(",\"segmentBId\":").Append(segmentBId);
+                    items.Append(",\"prefabA\":\"").Append(JsonUtil.Escape(segmentA.Info.name)).Append("\"");
+                    items.Append(",\"prefabB\":\"").Append(JsonUtil.Escape(segmentB.Info.name)).Append("\"");
+                    AppendSegment("segmentA", segmentA);
+                    AppendSegment("segmentB", segmentB);
+                    items.Append("}");
+                }
+            }
+
             private bool Begin(string type)
             {
                 total++;
@@ -858,7 +874,18 @@ namespace SkylinesAgentBridge
                     for (ushort b = (ushort)(a + 1); b < manager.m_segments.m_buffer.Length; b++)
                     {
                         NetSegment segmentB = manager.m_segments.m_buffer[b];
-                        if (!IsCreatedRoadSegment(segmentB) || SharesNode(segmentA, segmentB))
+                        if (!IsCreatedRoadSegment(segmentB))
+                        {
+                            continue;
+                        }
+
+                        if (SameEndpoints(segmentA, segmentB))
+                        {
+                            AddDuplicateRoadSegments(a, b, segmentA, segmentB);
+                            continue;
+                        }
+
+                        if (SharesNode(segmentA, segmentB))
                         {
                             continue;
                         }
@@ -1075,6 +1102,12 @@ namespace SkylinesAgentBridge
                     a.m_startNode == b.m_endNode ||
                     a.m_endNode == b.m_startNode ||
                     a.m_endNode == b.m_endNode;
+            }
+
+            private static bool SameEndpoints(NetSegment a, NetSegment b)
+            {
+                return (a.m_startNode == b.m_startNode && a.m_endNode == b.m_endNode) ||
+                    (a.m_startNode == b.m_endNode && a.m_endNode == b.m_startNode);
             }
 
             private static ushort GetSegmentId(NetNode node, int index)

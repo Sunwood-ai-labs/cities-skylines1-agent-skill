@@ -150,7 +150,7 @@ Invoke-RestMethod http://127.0.0.1:32123/state/networks?limit=1000
 ```
 
 Each segment includes `id`, `prefab`, `service`, `subService`, `problems`,
-`startNodeId`, `endNodeId`, `start`, `end`, and `middle`.
+`name`, `startNodeId`, `endNodeId`, `start`, `end`, and `middle`.
 
 ## GET /state/road-anomalies
 
@@ -166,6 +166,7 @@ Detected anomaly types:
 - `deadEndNearRoad`: a one-segment road endpoint is very close to another road segment, which often means the endpoint visually touches a road but did not create an intersection.
 - `deadEndRoad`: a normal road dead end. This is legal in CS1, but useful for agent-side design QA because unwanted frontage/service-road stubs often look like this.
 - `shortRoadStub`: a short road segment with a dead end, often left behind by failed frontage-road or service-road placement.
+- `duplicateRoadSegments`: two road segments share the same pair of endpoint nodes, which usually means one should be removed.
 - `overlappingRoadSegments`: two road segments run nearly on top of each other at the same height for a meaningful distance, which usually means a duplicate or accidental overlay.
 - `roadCrossingWithoutNode`: two road segments cross at nearly the same height without sharing a node, which usually means they visually overlap but are not a real intersection.
 

@@ -1,3 +1,5 @@
+using System;
+using System.Reflection;
 using UnityEngine;
 
 namespace SkylinesAgentBridge
@@ -42,7 +44,7 @@ namespace SkylinesAgentBridge
 
                 if (!dryRun)
                 {
-                    manager.ReleaseSegment(id, keepNodes);
+                    ReleaseSegment(manager, id, keepNodes);
                 }
 
                 return CommandResult.FromJson("{\"ok\":true,\"dryRun\":" + JsonUtil.Bool(dryRun) + ",\"entityType\":\"netSegment\",\"id\":" + id + ",\"keepNodes\":" + JsonUtil.Bool(keepNodes) + "}");
@@ -65,6 +67,35 @@ namespace SkylinesAgentBridge
             }
 
             return CommandResult.Fail("Unsupported entityType. Use building, netSegment, or netNode.");
+        }
+
+        private static void ReleaseSegment(NetManager manager, ushort id, bool keepNodes)
+        {
+            try
+            {
+                manager.ReleaseSegment(id, keepNodes);
+            }
+            catch (InvalidOperationException ex)
+            {
+                if (ex.Message == null || ex.Message.IndexOf("Already in the same thread") < 0)
+                {
+                    throw;
+                }
+
+                MethodInfo method = typeof(NetManager).GetMethod(
+                    "ReleaseSegmentImplementation",
+                    BindingFlags.Instance | BindingFlags.NonPublic,
+                    null,
+                    new Type[] { typeof(ushort) },
+                    null);
+
+                if (method == null)
+                {
+                    throw;
+                }
+
+                method.Invoke(manager, new object[] { id });
+            }
         }
     }
 }
