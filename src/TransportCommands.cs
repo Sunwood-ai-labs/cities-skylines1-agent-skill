@@ -41,13 +41,32 @@ namespace SkylinesAgentBridge
                 }
 
                 TransportInfo info = line.Info;
+                VehicleInfo vehicleInfo = null;
+                try { vehicleInfo = line.GetLineVehicle(lineId); } catch { }
                 string name = "";
                 try { name = manager.GetLineName(lineId); } catch { }
+                string defaultVehicleName = "";
+                int defaultVehicleIndex = -1;
+                try { defaultVehicleName = manager.GetDefaultLineVehicleName(lineId); } catch { }
+                try { defaultVehicleIndex = manager.GetDefaultLineVehicleIndex(lineId); } catch { }
 
                 items.Append("{\"id\":").Append(lineId);
                 items.Append(",\"name\":\"").Append(JsonUtil.Escape(name)).Append("\"");
                 items.Append(",\"transportType\":\"").Append(JsonUtil.Escape(info == null ? "" : info.m_transportType.ToString())).Append("\"");
                 items.Append(",\"vehicleType\":\"").Append(JsonUtil.Escape(info == null ? "" : info.m_vehicleType.ToString())).Append("\"");
+                items.Append(",\"vehicleReason\":\"").Append(JsonUtil.Escape(info == null ? "" : info.m_vehicleReason.ToString())).Append("\"");
+                items.Append(",\"citizenReason\":\"").Append(JsonUtil.Escape(info == null ? "" : info.m_citizenReason.ToString())).Append("\"");
+                items.Append(",\"defaultVehicleDistance\":").Append(JsonUtil.Number(info == null ? 0f : info.m_defaultVehicleDistance));
+                items.Append(",\"defaultVehicleIndex\":").Append(defaultVehicleIndex);
+                items.Append(",\"defaultVehicleName\":\"").Append(JsonUtil.Escape(defaultVehicleName)).Append("\"");
+                items.Append(",\"lineVehiclePrefab\":\"").Append(JsonUtil.Escape(vehicleInfo == null ? "" : vehicleInfo.name)).Append("\"");
+                items.Append(",\"flags\":\"").Append(JsonUtil.Escape(line.m_flags.ToString())).Append("\"");
+                items.Append(",\"budget\":").Append(line.m_budget);
+                items.Append(",\"ticketPrice\":").Append(line.m_ticketPrice);
+                items.Append(",\"averageInterval\":").Append(line.m_averageInterval);
+                items.Append(",\"buildingId\":").Append(line.m_building);
+                items.Append(",\"firstVehicleId\":").Append(line.m_vehicles);
+                items.Append(",\"targetVehicles\":").Append(line.CalculateTargetVehicleCount());
                 items.Append(",\"stops\":").Append(line.CountStops(lineId));
                 items.Append(",\"vehicles\":").Append(CountVehicles(line.m_vehicles));
                 items.Append(",\"passengers\":").Append(line.CalculatePassengerCount(lineId));
@@ -87,7 +106,7 @@ namespace SkylinesAgentBridge
             }
 
             TransportManager manager = TransportManager.instance;
-            TransportInfo info = manager.GetTransportInfo(transportType);
+            TransportInfo info = FindTransportInfo(transportType);
             if (info == null)
             {
                 return CommandResult.Fail("Transport info is not loaded for: " + transportType.ToString());
@@ -120,6 +139,7 @@ namespace SkylinesAgentBridge
 
             manager.m_lines.m_buffer[lineId].m_budget = 100;
             manager.m_lines.m_buffer[lineId].m_ticketPrice = (ushort)Mathf.Max(0, info.m_ticketPrice);
+            manager.m_lines.m_buffer[lineId].m_building = FindDepotBuilding(info);
             TransportLine.Flags beforeFlags = manager.m_lines.m_buffer[lineId].m_flags;
             for (int i = 0; i < stops.Count; i++)
             {
@@ -138,17 +158,68 @@ namespace SkylinesAgentBridge
             manager.m_lines.m_buffer[lineId].UpdateMeshData(lineId);
             manager.UpdateLine(lineId);
             manager.UpdateLinesNow();
+            manager.CheckTransportLineVehicles();
 
             TransportLine line = manager.m_lines.m_buffer[lineId];
             string json = "{\"ok\":true,\"dryRun\":false,\"lineId\":" + lineId +
                 ",\"name\":\"" + JsonUtil.Escape(lineName) + "\"" +
                 ",\"transportType\":\"" + JsonUtil.Escape(transportType.ToString()) + "\"" +
+                ",\"buildingId\":" + line.m_building +
                 ",\"stops\":" + line.CountStops(lineId) +
                 ",\"beforeFlags\":\"" + JsonUtil.Escape(beforeFlags.ToString()) + "\"" +
                 ",\"afterFlags\":\"" + JsonUtil.Escape(line.m_flags.ToString()) + "\"}";
 
             Debug.Log("[SkylinesAgentBridge] Created transport line " + lineId + " type " + transportType.ToString() + " with " + stops.Count + " stops");
             return CommandResult.FromJson(json);
+        }
+
+        public static CommandResult AssignTransportLineDepot(string body)
+        {
+            ushort lineId = (ushort)JsonUtil.GetNumber(body, "id", 0f);
+            ushort buildingId = (ushort)JsonUtil.GetNumber(body, "buildingId", 0f);
+
+            if (lineId == 0)
+            {
+                return CommandResult.Fail("id is required.");
+            }
+
+            TransportManager manager = TransportManager.instance;
+            TransportLine line = manager.m_lines.m_buffer[lineId];
+            if ((line.m_flags & TransportLine.Flags.Created) == TransportLine.Flags.None)
+            {
+                return CommandResult.Fail("Transport line was not found: " + lineId);
+            }
+
+            TransportInfo info = line.Info;
+            if (info == null)
+            {
+                return CommandResult.Fail("Transport info was not found for line: " + lineId);
+            }
+
+            if (buildingId == 0)
+            {
+                buildingId = FindDepotBuilding(info);
+            }
+
+            if (buildingId == 0)
+            {
+                return CommandResult.Fail("No active matching depot building was found for line: " + lineId);
+            }
+
+            BuildingManager buildings = BuildingManager.instance;
+            Building building = buildings.m_buildings.m_buffer[buildingId];
+            if (!IsUsableDepot(building, info))
+            {
+                return CommandResult.Fail("Building is not a usable depot for this line: " + buildingId);
+            }
+
+            manager.m_lines.m_buffer[lineId].m_building = buildingId;
+            manager.UpdateLine(lineId);
+            manager.UpdateLinesNow();
+            manager.CheckTransportLineVehicles();
+
+            return CommandResult.FromJson("{\"ok\":true,\"lineId\":" + lineId +
+                ",\"buildingId\":" + buildingId + "}");
         }
 
         public static CommandResult ReleaseTransportLine(string body)
@@ -240,6 +311,116 @@ namespace SkylinesAgentBridge
 
             transportType = TransportInfo.TransportType.Bus;
             return false;
+        }
+
+        private static TransportInfo FindTransportInfo(TransportInfo.TransportType transportType)
+        {
+            TransportInfo fallback = TransportManager.instance.GetTransportInfo(transportType);
+
+            int count = PrefabCollection<TransportInfo>.LoadedCount();
+            for (int i = 0; i < count; i++)
+            {
+                TransportInfo info = PrefabCollection<TransportInfo>.GetLoaded((uint)i);
+                if (info == null)
+                {
+                    continue;
+                }
+                if (info.m_transportType != transportType)
+                {
+                    continue;
+                }
+
+                if (transportType == TransportInfo.TransportType.Bus &&
+                    info.m_vehicleReason == TransferManager.TransferReason.Bus)
+                {
+                    return info;
+                }
+
+                if (fallback == null)
+                {
+                    fallback = info;
+                }
+            }
+
+            return fallback;
+        }
+
+        private static ushort FindDepotBuilding(TransportInfo transportInfo)
+        {
+            if (transportInfo == null)
+            {
+                return 0;
+            }
+
+            BuildingManager buildings = BuildingManager.instance;
+            for (ushort i = 1; i < buildings.m_buildings.m_buffer.Length; i++)
+            {
+                Building building = buildings.m_buildings.m_buffer[i];
+                if (IsUsableDepot(building, transportInfo))
+                {
+                    return i;
+                }
+            }
+
+            return 0;
+        }
+
+        private static bool IsUsableDepot(Building building, TransportInfo transportInfo)
+        {
+            if ((building.m_flags & Building.Flags.Created) == Building.Flags.None)
+            {
+                return false;
+            }
+            if ((building.m_flags & Building.Flags.Deleted) != Building.Flags.None)
+            {
+                return false;
+            }
+            if ((building.m_flags & Building.Flags.Active) == Building.Flags.None)
+            {
+                return false;
+            }
+            if ((building.m_flags & Building.Flags.RoadAccessFailed) != Building.Flags.None)
+            {
+                return false;
+            }
+            if (!building.m_problems.IsNone)
+            {
+                return false;
+            }
+
+            BuildingInfo buildingInfo = building.Info;
+            if (buildingInfo == null || buildingInfo.m_class == null)
+            {
+                return false;
+            }
+            if (buildingInfo.m_class.m_service != ItemClass.Service.PublicTransport)
+            {
+                return false;
+            }
+
+            ItemClass.SubService stationSubService = RequiredDepotSubService(transportInfo);
+            if (stationSubService != ItemClass.SubService.None &&
+                buildingInfo.m_class.m_subService != stationSubService)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private static ItemClass.SubService RequiredDepotSubService(TransportInfo transportInfo)
+        {
+            if (transportInfo == null)
+            {
+                return ItemClass.SubService.None;
+            }
+
+            if (transportInfo.m_transportType == TransportInfo.TransportType.Bus)
+            {
+                return ItemClass.SubService.PublicTransportBus;
+            }
+
+            return transportInfo.m_stationSubService;
         }
 
         private static Vector3 ReadPosition(string json)

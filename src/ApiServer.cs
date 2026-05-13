@@ -305,6 +305,12 @@ namespace SkylinesAgentBridge
                 return RunOnGameThread(request, delegate { return TransportCommands.ReleaseTransportLine(body); });
             }
 
+            if (request.Method == "POST" && request.Path == "/commands/assign-transport-line-depot")
+            {
+                string body = request.Body;
+                return RunOnGameThread(request, delegate { return TransportCommands.AssignTransportLineDepot(body); });
+            }
+
             if (request.Method == "POST" && request.Path == "/commands/batch")
             {
                 string body = request.Body;
@@ -417,6 +423,11 @@ namespace SkylinesAgentBridge
             if (request.Path == "/commands/release-transport-line")
             {
                 return "Release transport line #" + ((int)JsonUtil.GetNumber(body, "id", 0f)).ToString();
+            }
+
+            if (request.Path == "/commands/assign-transport-line-depot")
+            {
+                return "Assign depot to transport line #" + ((int)JsonUtil.GetNumber(body, "id", 0f)).ToString();
             }
 
             if (request.Path == "/commands/set-simulation-speed")
