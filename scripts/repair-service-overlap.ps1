@@ -41,14 +41,13 @@ function Bulldoze-Building($id) {
 $relocatedPrefabs = @(
     "Inland Water Treatment Plant 01",
     "Boiler Station",
-    "1691801543.Block Services - Garbage_Data",
-    "1691802727.Block Services - Health_Data",
-    "1691800474.Block Services - Fire_Data",
-    "1692831837.Block Services - Elementary_Data",
-    "1691797536.Block Services - Death_Data",
+    "Landfill Site",
+    "Medical Clinic",
+    "Fire House",
+    "Elementary School",
+    "Cemetery",
     "711884134.Koban Police Box_Data",
-    "1859219051.Block Services - Hot Water_Data",
-    "1691805373.Block Services - Sewage_Data"
+    "Water Tower"
 )
 
 Write-Host "Finding old service buildings that overlap or sit too close to roads"
@@ -76,12 +75,12 @@ Build-Network "Power Line" 400 160 580 184 "Agent Service Power North Offset"
 
 Write-Host "Rebuilding services off the road centerlines"
 Place-Building "711884134.Koban Police Box_Data" 200 184 180
-Place-Building "1691800474.Block Services - Fire_Data" 260 184 180
-Place-Building "1691802727.Block Services - Health_Data" 340 184 180
-Place-Building "1692831837.Block Services - Elementary_Data" 440 184 180
-Place-Building "1691797536.Block Services - Death_Data" 500 184 180
-Place-Building "1691801543.Block Services - Garbage_Data" 540 184 180
-Place-Building "1691801543.Block Services - Garbage_Data" 500 244 180
+Place-Building "Fire House" 260 184 180
+Place-Building "Medical Clinic" 340 184 180
+Place-Building "Elementary School" 440 184 180
+Place-Building "Cemetery" 500 184 180
+Place-Building "Landfill Site" 540 184 180
+Place-Building "Landfill Site" 500 244 180
 Place-Building "Inland Water Treatment Plant 01" 540 260 180
 Place-Building "Boiler Station" 360 128 0
 

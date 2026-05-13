@@ -17,6 +17,7 @@
 ```powershell
 Invoke-RestMethod http://127.0.0.1:32123/health
 Invoke-RestMethod http://127.0.0.1:32123/state/summary
+Invoke-RestMethod http://127.0.0.1:32123/state/demand
 Invoke-RestMethod "http://127.0.0.1:32123/state/problems?limit=200"
 Invoke-RestMethod "http://127.0.0.1:32123/state/road-anomalies?limit=500&nearMissDistance=18&shortSegmentLength=32&includeDeadEnds=false"
 Invoke-RestMethod "http://127.0.0.1:32123/state/building-anomalies?limit=200"

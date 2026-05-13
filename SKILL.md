@@ -1,6 +1,6 @@
 ---
 name: cities-skylines1-agent-skill
-description: Operate Cities: Skylines 1 through the Skylines Agent Bridge mod and localhost API. Use when Codex needs to build, inspect, repair, resume, save, or continue a CS1 city using focused API calls rather than screenshot recognition, including road connectivity, service infrastructure, zoning, facilities, problem icons, and save verification.
+description: "Operate Cities: Skylines 1 through the Skylines Agent Bridge mod and localhost API. Use when Codex needs to build, inspect, repair, resume, save, or continue a CS1 city using focused API calls rather than screenshot recognition, including road connectivity, service infrastructure, zoning, facilities, problem icons, and save verification."
 ---
 
 # Cities: Skylines 1 Agent Skill
@@ -48,10 +48,15 @@ Use these before acting:
 ```powershell
 Invoke-RestMethod http://127.0.0.1:32123/health
 Invoke-RestMethod http://127.0.0.1:32123/state/summary
+Invoke-RestMethod "http://127.0.0.1:32123/state/chirps?limit=50"
+Invoke-RestMethod http://127.0.0.1:32123/state/zones
 Invoke-RestMethod "http://127.0.0.1:32123/state/problems?limit=200"
+Invoke-RestMethod "http://127.0.0.1:32123/state/economy"
 Invoke-RestMethod "http://127.0.0.1:32123/state/road-anomalies?limit=500&nearMissDistance=18&shortSegmentLength=32&includeDeadEnds=false"
 Invoke-RestMethod "http://127.0.0.1:32123/state/building-anomalies?limit=200"
+Invoke-RestMethod "http://127.0.0.1:32123/state/zone-anomalies?limit=200&includeUnzonedHoles=true"
 Invoke-RestMethod "http://127.0.0.1:32123/state/facilities?limit=500"
+Invoke-RestMethod "http://127.0.0.1:32123/state/growables?limit=500"
 Invoke-RestMethod "http://127.0.0.1:32123/state/networks?limit=1000&service=Road"
 ```
 
@@ -90,7 +95,7 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:32123/commands/place-buildi
 Paint zones:
 
 ```powershell
-$body = @{ zone = "ResidentialLow"; center = @{ x = 240; z = -40 }; radius = 70 } | ConvertTo-Json -Depth 5
+$body = @{ zone = "ResidentialLow"; preserveOccupied = $true; center = @{ x = 240; z = -40 }; radius = 70 } | ConvertTo-Json -Depth 5
 Invoke-RestMethod -Method Post -Uri http://127.0.0.1:32123/commands/set-zone -Body $body -ContentType "application/json"
 ```
 
@@ -99,6 +104,13 @@ Run simulation:
 ```powershell
 $body = @{ paused = $false; speed = 3 } | ConvertTo-Json
 Invoke-RestMethod -Method Post -Uri http://127.0.0.1:32123/commands/set-simulation-speed -Body $body -ContentType "application/json"
+```
+
+Lower taxes when `/state/problems` reports `TaxesTooHigh`:
+
+```powershell
+$body = @{ service = "Commercial"; rate = 9 } | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:32123/commands/set-tax-rate -Body $body -ContentType "application/json"
 ```
 
 Save and verify:
@@ -114,3 +126,6 @@ Invoke-RestMethod http://127.0.0.1:32123/state/saves
 - Heating service buildings may create an actual connection helper offset from the building center. Query `/state/facilities?service=Water&includeMapObjects=true` when diagnosing heating pipe issues.
 - Roads that look connected to highways can still have separate nodes. Use `/state/road-anomalies` and rebuild with endpoints close enough to reuse the existing road nodes.
 - Do not treat all dead ends as errors. Use bounded checks or `includeDeadEnds=false` unless the user asks to remove cul-de-sacs/stubs.
+- Use `/state/zone-anomalies` when zone colors look mottled or circular paint left residential/commercial/industrial/office cells mixed in the same block.
+- `/commands/set-zone` defaults to `preserveOccupied=true`; check `/state/growables` first and keep that flag enabled unless the user explicitly wants to repaint developed blocks.
+- If screenshots show blue/green/yellow mottling across a whole city block, use `/state/zone-anomalies` and repair with `/commands/repair-zone-clusters` using `preferGrowableZone=true`.

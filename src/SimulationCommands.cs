@@ -9,9 +9,9 @@ namespace SkylinesAgentBridge
             bool paused = JsonUtil.GetBool(body, "paused", false);
             int speed = (int)JsonUtil.GetNumber(body, "speed", 1f);
 
-            if (speed < 0)
+            if (speed < 1)
             {
-                speed = 0;
+                speed = 1;
             }
             if (speed > 3)
             {
@@ -20,8 +20,8 @@ namespace SkylinesAgentBridge
 
             SimulationManager simulation = Singleton<SimulationManager>.instance;
             simulation.ForcedSimulationPaused = false;
+            simulation.SelectedSimulationSpeed = speed;
             simulation.SimulationPaused = paused;
-            simulation.SelectedSimulationSpeed = paused ? 0 : speed;
 
             return CommandResult.FromJson("{\"ok\":true,\"paused\":" + JsonUtil.Bool(simulation.SimulationPaused) +
                 ",\"selectedSpeed\":" + simulation.SelectedSimulationSpeed +

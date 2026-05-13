@@ -11,7 +11,8 @@
 <p align="center">
   <a href="README.ja.md">日本語 README</a> ·
   <a href="https://sunwood-ai-labs.github.io/cities-skylines1-agent-skill/">Docs</a> ·
-  <a href="docs/api.md">API Reference</a>
+  <a href="docs/api.md">API Reference</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a>
 </p>
 
 <p align="center">
@@ -29,17 +30,17 @@ The goal is simple: stop relying on screenshots for city state. The bridge expos
 ## ✨ What It Does
 
 - Runs a CS1 mod that listens on `http://127.0.0.1:32123`.
-- Exposes city state APIs for problems, facilities, networks, road anomalies, building placement anomalies, saves, and prefabs.
+- Exposes city state APIs for problems, facilities, networks, road anomalies, building placement anomalies, zoning anomalies, saves, and prefabs.
 - Exposes focused command APIs for network creation, zoning, building placement, building movement, bulldozing, simulation speed, batch helpers, and saving.
-- Shows in-game API activity notifications so the CS1 screen reflects what the agent is doing.
+- Shows in-game API activity in a persistent console with timestamps, clear, and minimize controls.
 - Includes Windows scripts for building the mod, launching Resume, starting a fresh map, inspecting issues, repairing bounded anomalies, and saving.
 - Ships as a Codex skill through [SKILL.md](SKILL.md) and [agents/openai.yaml](agents/openai.yaml).
 
 ## 🖼️ Screenshot Tour
 
-### In-Game API Notifications
+### In-Game API Console
 
-Every game-state API request appears in the CS1 UI for a few seconds.
+Every game-state API request is appended to a compact CS1 UI console, so recent agent activity stays visible while you work.
 
 ![API notification overlay](docs/assets/api-notification.jpg)
 
@@ -74,6 +75,8 @@ Invoke-RestMethod http://127.0.0.1:32123/health
 Invoke-RestMethod http://127.0.0.1:32123/state/summary
 ```
 
+Development uses a lightweight Git Flow model: feature branches target `develop`, while releases and hotfixes target `main`. See [CONTRIBUTING.md](CONTRIBUTING.md) for the branch and AI review workflow.
+
 For the normal agent loop, resume the newest local save:
 
 ```powershell
@@ -104,10 +107,14 @@ Read APIs:
 - `GET /health`
 - `GET /state/summary`
 - `GET /state/problems`
+- `GET /state/chirps`
+- `GET /state/zones`
+- `GET /state/economy`
 - `GET /state/facilities`
 - `GET /state/networks`
 - `GET /state/road-anomalies`
 - `GET /state/building-anomalies`
+- `GET /state/zone-anomalies`
 - `GET /state/saves`
 - `GET /prefabs/roads`
 - `GET /prefabs/networks`
@@ -123,6 +130,7 @@ Command APIs:
 - `POST /commands/bulldoze`
 - `POST /commands/save`
 - `POST /commands/set-simulation-speed`
+- `POST /commands/set-tax-rate`
 - `POST /commands/batch` optional convenience wrapper
 
 See [docs/api.md](docs/api.md) for request examples and response shapes.

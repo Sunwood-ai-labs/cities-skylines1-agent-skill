@@ -35,7 +35,9 @@ src/
 
 ## In-Game Notifications
 
-Game-state API calls show short overlay messages inside CS1. This makes the bridge observable while an agent is working and helps confirm that requests are reaching the mod.
+Game-state API calls are written to a small in-game API console instead of a
+temporary toast. The console keeps recent request history, shows timestamps,
+and has a minimize button so it can stay available without covering the city.
 
 `/health` is intentionally quiet because it can be called before a level is loaded.
 

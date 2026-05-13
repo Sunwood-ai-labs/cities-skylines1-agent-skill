@@ -115,12 +115,40 @@ namespace SkylinesAgentBridge
                 return RunOnGameThread(request, delegate { return GameState.BuildProblemsJson(limit); });
             }
 
+            if (request.Method == "GET" && request.Path == "/state/demand")
+            {
+                return RunOnGameThread(request, GameState.BuildDemandJson);
+            }
+
+            if (request.Method == "GET" && request.Path == "/state/chirps")
+            {
+                int limit = request.GetQueryInt("limit", 50);
+                return RunOnGameThread(request, delegate { return GameState.BuildChirpsJson(limit); });
+            }
+
+            if (request.Method == "GET" && request.Path == "/state/zones")
+            {
+                return RunOnGameThread(request, GameState.BuildZonesJson);
+            }
+
+            if (request.Method == "GET" && request.Path == "/state/economy")
+            {
+                return RunOnGameThread(request, GameState.BuildEconomyJson);
+            }
+
             if (request.Method == "GET" && request.Path == "/state/facilities")
             {
                 int limit = request.GetQueryInt("limit", 500);
                 string service = request.GetQueryString("service", "");
                 bool includeMapObjects = request.GetQueryString("includeMapObjects", "false") == "true";
                 return RunOnGameThread(request, delegate { return GameState.BuildFacilitiesJson(limit, service, includeMapObjects); });
+            }
+
+            if (request.Method == "GET" && request.Path == "/state/growables")
+            {
+                int limit = request.GetQueryInt("limit", 500);
+                string service = request.GetQueryString("service", "");
+                return RunOnGameThread(request, delegate { return GameState.BuildGrowablesJson(limit, service); });
             }
 
             if (request.Method == "GET" && request.Path == "/state/networks")
@@ -139,10 +167,25 @@ namespace SkylinesAgentBridge
                 return RunOnGameThread(request, delegate { return GameState.BuildRoadAnomaliesJson(limit, nearMissDistance, shortSegmentLength, includeDeadEnds); });
             }
 
+            if (request.Method == "GET" && request.Path == "/state/external-connections")
+            {
+                int limit = request.GetQueryInt("limit", 50);
+                return RunOnGameThread(request, delegate { return GameState.BuildExternalConnectionsJson(limit); });
+            }
+
             if (request.Method == "GET" && request.Path == "/state/building-anomalies")
             {
                 int limit = request.GetQueryInt("limit", 200);
                 return RunOnGameThread(request, delegate { return GameState.BuildBuildingAnomaliesJson(limit); });
+            }
+
+            if (request.Method == "GET" && request.Path == "/state/zone-anomalies")
+            {
+                int limit = request.GetQueryInt("limit", 200);
+                int minMinorityCells = request.GetQueryInt("minMinorityCells", 3);
+                int minUnzonedCells = request.GetQueryInt("minUnzonedCells", 6);
+                bool includeUnzonedHoles = request.GetQueryString("includeUnzonedHoles", "true") == "true";
+                return RunOnGameThread(request, delegate { return GameState.BuildZoneAnomaliesJson(limit, minMinorityCells, minUnzonedCells, includeUnzonedHoles); });
             }
 
             if (request.Method == "GET" && request.Path == "/state/saves")
@@ -185,6 +228,18 @@ namespace SkylinesAgentBridge
                 return RunOnGameThread(request, delegate { return ZoneCommands.SetZone(body); });
             }
 
+            if (request.Method == "POST" && request.Path == "/commands/repair-zones-to-growables")
+            {
+                string body = request.Body;
+                return RunOnGameThread(request, delegate { return ZoneCommands.RepairZonesToGrowables(body); });
+            }
+
+            if (request.Method == "POST" && request.Path == "/commands/repair-zone-clusters")
+            {
+                string body = request.Body;
+                return RunOnGameThread(request, delegate { return ZoneCommands.RepairZoneClusters(body); });
+            }
+
             if (request.Method == "POST" && request.Path == "/commands/place-building")
             {
                 string body = request.Body;
@@ -197,10 +252,27 @@ namespace SkylinesAgentBridge
                 return RunOnGameThread(request, delegate { return BuildingCommands.MoveBuilding(body); });
             }
 
+            if (request.Method == "POST" && request.Path == "/commands/set-building-active")
+            {
+                string body = request.Body;
+                return RunOnGameThread(request, delegate { return BuildingCommands.SetBuildingActive(body); });
+            }
+
+            if (request.Method == "POST" && request.Path == "/commands/disable-blocked-assets")
+            {
+                return RunOnGameThread(request, AssetCommands.DisableBlockedAssets);
+            }
+
             if (request.Method == "POST" && request.Path == "/commands/set-simulation-speed")
             {
                 string body = request.Body;
                 return RunOnGameThread(request, delegate { return SimulationCommands.SetSimulationSpeed(body); });
+            }
+
+            if (request.Method == "POST" && request.Path == "/commands/set-tax-rate")
+            {
+                string body = request.Body;
+                return RunOnGameThread(request, delegate { return EconomyCommands.SetTaxRate(body); });
             }
 
             if (request.Method == "POST" && request.Path == "/commands/bulldoze")
@@ -248,10 +320,17 @@ namespace SkylinesAgentBridge
             {
                 if (request.Path == "/state/summary") return "Read city summary";
                 if (request.Path == "/state/problems") return "Read city problems";
+                if (request.Path == "/state/demand") return "Read zone demand";
+                if (request.Path == "/state/chirps") return "Read citizen chirps";
+                if (request.Path == "/state/zones") return "Read zoning summary";
+                if (request.Path == "/state/economy") return "Read economy state";
                 if (request.Path == "/state/facilities") return "Read facilities";
+                if (request.Path == "/state/growables") return "Read growable buildings";
                 if (request.Path == "/state/networks") return "Read networks";
                 if (request.Path == "/state/road-anomalies") return "Inspect road anomalies";
+                if (request.Path == "/state/external-connections") return "Inspect external connections";
                 if (request.Path == "/state/building-anomalies") return "Inspect building placement";
+                if (request.Path == "/state/zone-anomalies") return "Inspect zoning anomalies";
                 if (request.Path == "/state/saves") return "List saves";
                 if (request.Path == "/prefabs/roads") return "List road prefabs";
                 if (request.Path == "/prefabs/networks") return "List network prefabs";
@@ -270,6 +349,16 @@ namespace SkylinesAgentBridge
                 return "Set zone " + JsonUtil.GetString(body, "zone", "");
             }
 
+            if (request.Path == "/commands/repair-zones-to-growables")
+            {
+                return "Repair zones to growables";
+            }
+
+            if (request.Path == "/commands/repair-zone-clusters")
+            {
+                return "Repair zone clusters";
+            }
+
             if (request.Path == "/commands/place-building")
             {
                 return "Place building " + JsonUtil.GetString(body, "buildingPrefab", "");
@@ -278,6 +367,16 @@ namespace SkylinesAgentBridge
             if (request.Path == "/commands/move-building")
             {
                 return "Move building #" + ((int)JsonUtil.GetNumber(body, "id", 0f)).ToString();
+            }
+
+            if (request.Path == "/commands/set-building-active")
+            {
+                return "Set building active #" + ((int)JsonUtil.GetNumber(body, "id", 0f)).ToString();
+            }
+
+            if (request.Path == "/commands/disable-blocked-assets")
+            {
+                return "Disable blocked assets";
             }
 
             if (request.Path == "/commands/bulldoze")
@@ -298,6 +397,11 @@ namespace SkylinesAgentBridge
                     return "Pause simulation";
                 }
                 return "Set simulation speed " + ((int)JsonUtil.GetNumber(body, "speed", 0f)).ToString();
+            }
+
+            if (request.Path == "/commands/set-tax-rate")
+            {
+                return "Set tax rate " + ((int)JsonUtil.GetNumber(body, "rate", 0f)).ToString();
             }
 
             if (request.Path == "/commands/batch")

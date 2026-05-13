@@ -1,5 +1,3 @@
-using UnityEngine;
-
 namespace SkylinesAgentBridge
 {
     public static class BulldozeCommands
@@ -26,7 +24,7 @@ namespace SkylinesAgentBridge
 
                 if (!dryRun)
                 {
-                    manager.ReleaseBuilding(id);
+                    GameThreadHelpers.ReleaseBuilding(manager, id);
                 }
 
                 return CommandResult.FromJson("{\"ok\":true,\"dryRun\":" + JsonUtil.Bool(dryRun) + ",\"entityType\":\"building\",\"id\":" + id + "}");
@@ -42,7 +40,7 @@ namespace SkylinesAgentBridge
 
                 if (!dryRun)
                 {
-                    manager.ReleaseSegment(id, keepNodes);
+                    GameThreadHelpers.ReleaseSegment(manager, id, keepNodes);
                 }
 
                 return CommandResult.FromJson("{\"ok\":true,\"dryRun\":" + JsonUtil.Bool(dryRun) + ",\"entityType\":\"netSegment\",\"id\":" + id + ",\"keepNodes\":" + JsonUtil.Bool(keepNodes) + "}");
