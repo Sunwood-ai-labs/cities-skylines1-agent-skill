@@ -141,10 +141,24 @@ Invoke-RestMethod http://127.0.0.1:32123/state/networks?limit=1000
 画面上は接続して見えても、CS1 の道路グラフ上は接続していない形状を検出します。
 短い不要スタブ、近接した未接続端点、同じノード間に重複した道路に加えて、同じ高さでほぼ重なっている道路、同じ高さで交差しているのにノード共有していない道路、
 周囲地形と大きく段差がある埋没・崖化した道路も検出します。
+`roadBelowLocalGrade` は、Agent が作った地表道路だけが周囲の街路より大きく
+沈んでいるケースを返します。
 
 ```powershell
 Invoke-RestMethod "http://127.0.0.1:32123/state/road-anomalies?nearMissDistance=18&shortSegmentLength=32&includeDeadEnds=true"
 ```
+
+## GET /state/external-connections
+
+街のローカル道路コンポーネントが CS1 の外部道路ノードにつながっているかを
+返します。高速道路が見えているのに外部から車が来ない場合の確認に使えます。
+
+```powershell
+Invoke-RestMethod "http://127.0.0.1:32123/state/external-connections?limit=50"
+```
+
+`cityConnectedToOutside`、`disconnectedLocalRoadComponents`、外部ノード数、
+道路コンポーネント概要を返します。
 
 ## GET /state/building-anomalies
 

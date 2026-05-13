@@ -215,6 +215,7 @@ Detected anomaly types:
 - `overlappingRoadSegments`: two road segments run nearly on top of each other at the same height for a meaningful distance, which usually means a duplicate or accidental overlay.
 - `roadCrossingWithoutNode`: two road segments cross at nearly the same height without sharing a node, which usually means they visually overlap but are not a real intersection.
 - `roadTerrainCliff`: a ground road has a large height mismatch against nearby sampled terrain, which can indicate buried roads or terrain spikes/cliffs caused by bad road placement.
+- `roadBelowLocalGrade`: an agent-built ground road sits far below the surrounding local road grade, which often means a sunken or buried road.
 
 Each anomaly includes the affected node or segment IDs plus world coordinates,
 so an agent can call `/commands/bulldoze` or add a connector road without using
@@ -229,6 +230,21 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\inspect-road-anomali
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\repair-road-anomalies.ps1 `
   -MinX 450 -MaxX 620 -MinZ 90 -MaxZ 250
 ```
+
+## GET /state/external-connections
+
+Checks whether the city's local road component is connected to CS1 outside road
+nodes. This is useful when a city visually has highways nearby but no outside
+cars enter because the local road graph is still separate from the highway
+network.
+
+```powershell
+Invoke-RestMethod "http://127.0.0.1:32123/state/external-connections?limit=50"
+```
+
+The response includes `cityConnectedToOutside`,
+`disconnectedLocalRoadComponents`, outside node counts, and sampled road
+components.
 
 ## GET /state/building-anomalies
 

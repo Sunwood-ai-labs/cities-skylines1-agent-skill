@@ -167,6 +167,12 @@ namespace SkylinesAgentBridge
                 return RunOnGameThread(request, delegate { return GameState.BuildRoadAnomaliesJson(limit, nearMissDistance, shortSegmentLength, includeDeadEnds); });
             }
 
+            if (request.Method == "GET" && request.Path == "/state/external-connections")
+            {
+                int limit = request.GetQueryInt("limit", 50);
+                return RunOnGameThread(request, delegate { return GameState.BuildExternalConnectionsJson(limit); });
+            }
+
             if (request.Method == "GET" && request.Path == "/state/building-anomalies")
             {
                 int limit = request.GetQueryInt("limit", 200);
@@ -322,6 +328,7 @@ namespace SkylinesAgentBridge
                 if (request.Path == "/state/growables") return "Read growable buildings";
                 if (request.Path == "/state/networks") return "Read networks";
                 if (request.Path == "/state/road-anomalies") return "Inspect road anomalies";
+                if (request.Path == "/state/external-connections") return "Inspect external connections";
                 if (request.Path == "/state/building-anomalies") return "Inspect building placement";
                 if (request.Path == "/state/zone-anomalies") return "Inspect zoning anomalies";
                 if (request.Path == "/state/saves") return "List saves";

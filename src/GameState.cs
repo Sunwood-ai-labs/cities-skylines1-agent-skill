@@ -735,6 +735,22 @@ namespace SkylinesAgentBridge
             return CommandResult.FromJson(collector.ToJson());
         }
 
+        public static CommandResult BuildExternalConnectionsJson(int limit)
+        {
+            if (limit < 0)
+            {
+                limit = 0;
+            }
+            if (limit > 200)
+            {
+                limit = 200;
+            }
+
+            ExternalConnectionCollector collector = new ExternalConnectionCollector(limit);
+            collector.Collect();
+            return CommandResult.FromJson(collector.ToJson());
+        }
+
         public static CommandResult BuildBuildingAnomaliesJson(int limit)
         {
             if (limit < 0)
@@ -1379,6 +1395,7 @@ namespace SkylinesAgentBridge
             private const float RoadTerrainSideDeltaTolerance = 28f;
             private const float RoadTerrainAdjacentDeltaTolerance = 14f;
             private const float RoadTerrainBoundsMargin = 700f;
+            private const float RoadBelowLocalGradeTolerance = 24f;
             private readonly int limit;
             private readonly float nearMissDistance;
             private readonly float shortSegmentLength;
@@ -1578,6 +1595,21 @@ namespace SkylinesAgentBridge
                 }
             }
 
+            private void AddRoadBelowLocalGrade(ushort segmentId, NetSegment segment, float localGradeY, float roadY)
+            {
+                if (Begin("roadBelowLocalGrade"))
+                {
+                    items.Append(",\"segmentId\":").Append(segmentId);
+                    items.Append(",\"name\":\"").Append(JsonUtil.Escape(NetManager.instance.GetSegmentName(segmentId))).Append("\"");
+                    items.Append(",\"prefab\":\"").Append(JsonUtil.Escape(segment.Info.name)).Append("\"");
+                    items.Append(",\"localGradeY\":").Append(JsonUtil.Number(localGradeY));
+                    items.Append(",\"roadY\":").Append(JsonUtil.Number(roadY));
+                    items.Append(",\"belowBy\":").Append(JsonUtil.Number(localGradeY - roadY));
+                    AppendSegment("segment", segment);
+                    items.Append("}");
+                }
+            }
+
             private bool Begin(string type)
             {
                 total++;
@@ -1695,6 +1727,8 @@ namespace SkylinesAgentBridge
                     return;
                 }
 
+                float localGradeY = EstimateAgentRoadGrade(manager);
+
                 for (ushort i = 1; i < manager.m_segments.m_buffer.Length; i++)
                 {
                     NetSegment segment = manager.m_segments.m_buffer[i];
@@ -1705,6 +1739,12 @@ namespace SkylinesAgentBridge
 
                     Vector3 start = manager.m_nodes.m_buffer[segment.m_startNode].m_position;
                     Vector3 end = manager.m_nodes.m_buffer[segment.m_endNode].m_position;
+                    float averageRoadY = (start.y + end.y) * 0.5f;
+                    if (localGradeY > 0f && IsAgentNamedRoad(i) && localGradeY - averageRoadY >= RoadBelowLocalGradeTolerance)
+                    {
+                        AddRoadBelowLocalGrade(i, segment, localGradeY, averageRoadY);
+                    }
+
                     if (!IsAgentNamedRoad(i) && !SegmentTouchesBounds(start, end, minX, maxX, minZ, maxZ))
                     {
                         continue;
@@ -1755,6 +1795,33 @@ namespace SkylinesAgentBridge
                         AddRoadTerrainCliff(i, segment, maxRoadToTerrainDelta, maxSideToSideDelta, maxAdjacentTerrainDelta, worstPoint);
                     }
                 }
+            }
+
+            private static float EstimateAgentRoadGrade(NetManager manager)
+            {
+                float total = 0f;
+                int count = 0;
+                for (ushort i = 1; i < manager.m_segments.m_buffer.Length; i++)
+                {
+                    NetSegment segment = manager.m_segments.m_buffer[i];
+                    if (!IsCreatedRoadSegment(segment) || !IsAgentNamedRoad(i) || SkipTerrainAnomalyCheck(segment.Info))
+                    {
+                        continue;
+                    }
+
+                    string name = NetManager.instance.GetSegmentName(i);
+                    if (ContainsIgnoreCase(name, "Outside") || ContainsIgnoreCase(name, "Highway Connector"))
+                    {
+                        continue;
+                    }
+
+                    Vector3 start = manager.m_nodes.m_buffer[segment.m_startNode].m_position;
+                    Vector3 end = manager.m_nodes.m_buffer[segment.m_endNode].m_position;
+                    total += (start.y + end.y) * 0.5f;
+                    count++;
+                }
+
+                return count == 0 ? 0f : total / count;
             }
 
             private static float SampleRoadSideTerrain(TerrainManager terrain, Vector3 center, Vector3 side, float sideSign, float roadY, ref float maxRoadToTerrainDelta, ref float maxAdjacentTerrainDelta)
@@ -2102,6 +2169,250 @@ namespace SkylinesAgentBridge
             private static bool IsRoadInfo(NetInfo info)
             {
                 return info != null && info.m_class != null && info.m_class.m_service == ItemClass.Service.Road;
+            }
+        }
+
+        private sealed class ExternalConnectionCollector
+        {
+            private readonly int limit;
+            private readonly StringBuilder components = new StringBuilder();
+            private int roadComponents;
+            private int emitted;
+            private int outsideRoadNodes;
+            private int outsideRoadSegments;
+            private int localRoadComponents;
+            private int disconnectedLocalRoadComponents;
+            private int cityComponentId = -1;
+            private bool cityConnectedToOutside;
+            private bool firstComponent = true;
+
+            public ExternalConnectionCollector(int limit)
+            {
+                this.limit = limit;
+            }
+
+            public void Collect()
+            {
+                NetManager manager = NetManager.instance;
+                bool[] isRoadSegment = new bool[manager.m_segments.m_buffer.Length];
+                bool[] visited = new bool[manager.m_segments.m_buffer.Length];
+
+                for (ushort i = 1; i < manager.m_segments.m_buffer.Length; i++)
+                {
+                    NetSegment segment = manager.m_segments.m_buffer[i];
+                    isRoadSegment[i] = IsRoadSegment(segment);
+                    if (isRoadSegment[i] && (IsOutsideNode(manager, segment.m_startNode) || IsOutsideNode(manager, segment.m_endNode)))
+                    {
+                        outsideRoadSegments++;
+                    }
+                }
+
+                for (ushort i = 1; i < manager.m_nodes.m_buffer.Length; i++)
+                {
+                    NetNode node = manager.m_nodes.m_buffer[i];
+                    if ((node.m_flags & NetNode.Flags.Created) != NetNode.Flags.None && IsOutsideNode(manager, i))
+                    {
+                        outsideRoadNodes++;
+                    }
+                }
+
+                int bestCityScore = -1;
+                for (ushort i = 1; i < manager.m_segments.m_buffer.Length; i++)
+                {
+                    if (!isRoadSegment[i] || visited[i])
+                    {
+                        continue;
+                    }
+
+                    ComponentStats stats = CollectComponent(manager, i, isRoadSegment, visited);
+                    roadComponents++;
+                    stats.ComponentId = roadComponents;
+
+                    if (stats.IsLocalRoadComponent)
+                    {
+                        localRoadComponents++;
+                        if (!stats.OutsideConnected)
+                        {
+                            disconnectedLocalRoadComponents++;
+                        }
+                    }
+
+                    int cityScore = stats.AgentNamedSegments * 4 + stats.NonHighwaySegments;
+                    if (cityScore > bestCityScore)
+                    {
+                        bestCityScore = cityScore;
+                        cityComponentId = stats.ComponentId;
+                        cityConnectedToOutside = stats.OutsideConnected;
+                    }
+
+                    AddComponent(stats);
+                }
+            }
+
+            public string ToJson()
+            {
+                return "{\"ok\":true" +
+                    ",\"roadComponents\":" + roadComponents +
+                    ",\"returned\":" + emitted +
+                    ",\"limit\":" + limit +
+                    ",\"outsideRoadNodes\":" + outsideRoadNodes +
+                    ",\"outsideRoadSegments\":" + outsideRoadSegments +
+                    ",\"localRoadComponents\":" + localRoadComponents +
+                    ",\"disconnectedLocalRoadComponents\":" + disconnectedLocalRoadComponents +
+                    ",\"cityComponentId\":" + cityComponentId +
+                    ",\"cityConnectedToOutside\":" + JsonUtil.Bool(cityConnectedToOutside) +
+                    ",\"components\":[" + components.ToString() + "]}";
+            }
+
+            private ComponentStats CollectComponent(NetManager manager, ushort firstSegment, bool[] isRoadSegment, bool[] visited)
+            {
+                ComponentStats stats = new ComponentStats();
+                System.Collections.Generic.Queue<ushort> queue = new System.Collections.Generic.Queue<ushort>();
+                queue.Enqueue(firstSegment);
+                visited[firstSegment] = true;
+
+                while (queue.Count > 0)
+                {
+                    ushort segmentId = queue.Dequeue();
+                    NetSegment segment = manager.m_segments.m_buffer[segmentId];
+                    stats.SegmentCount++;
+                    stats.SampleSegmentId = stats.SampleSegmentId == 0 ? segmentId : stats.SampleSegmentId;
+
+                    string prefab = segment.Info == null || segment.Info.name == null ? "" : segment.Info.name;
+                    string name = manager.GetSegmentName(segmentId);
+                    if (stats.SampleName.Length == 0 && name.Length > 0)
+                    {
+                        stats.SampleName = name;
+                    }
+                    if (ContainsIgnoreCase(name, "Agent"))
+                    {
+                        stats.AgentNamedSegments++;
+                    }
+                    if (!ContainsIgnoreCase(prefab, "Highway"))
+                    {
+                        stats.NonHighwaySegments++;
+                    }
+
+                    Vector3 middle = segment.m_middlePosition;
+                    stats.Center += middle;
+
+                    VisitNode(manager, segment.m_startNode, isRoadSegment, visited, queue, stats);
+                    VisitNode(manager, segment.m_endNode, isRoadSegment, visited, queue, stats);
+                }
+
+                if (stats.SegmentCount > 0)
+                {
+                    stats.Center /= stats.SegmentCount;
+                }
+                stats.IsLocalRoadComponent = stats.AgentNamedSegments > 0 || stats.NonHighwaySegments > 0;
+                return stats;
+            }
+
+            private void VisitNode(NetManager manager, ushort nodeId, bool[] isRoadSegment, bool[] visited, System.Collections.Generic.Queue<ushort> queue, ComponentStats stats)
+            {
+                if (IsOutsideNode(manager, nodeId))
+                {
+                    stats.OutsideNodes++;
+                    stats.OutsideConnected = true;
+                }
+
+                NetNode node = manager.m_nodes.m_buffer[nodeId];
+                for (int i = 0; i < 8; i++)
+                {
+                    ushort connectedSegment = GetSegmentId(node, i);
+                    if (connectedSegment == 0 || !isRoadSegment[connectedSegment] || visited[connectedSegment])
+                    {
+                        continue;
+                    }
+
+                    visited[connectedSegment] = true;
+                    queue.Enqueue(connectedSegment);
+                }
+            }
+
+            private void AddComponent(ComponentStats stats)
+            {
+                if (emitted >= limit)
+                {
+                    return;
+                }
+                if (!firstComponent)
+                {
+                    components.Append(",");
+                }
+
+                components.Append("{\"componentId\":").Append(stats.ComponentId);
+                components.Append(",\"segmentCount\":").Append(stats.SegmentCount);
+                components.Append(",\"agentNamedSegments\":").Append(stats.AgentNamedSegments);
+                components.Append(",\"nonHighwaySegments\":").Append(stats.NonHighwaySegments);
+                components.Append(",\"outsideNodes\":").Append(stats.OutsideNodes);
+                components.Append(",\"outsideConnected\":").Append(JsonUtil.Bool(stats.OutsideConnected));
+                components.Append(",\"isLocalRoadComponent\":").Append(JsonUtil.Bool(stats.IsLocalRoadComponent));
+                components.Append(",\"sampleSegmentId\":").Append(stats.SampleSegmentId);
+                components.Append(",\"sampleName\":\"").Append(JsonUtil.Escape(stats.SampleName)).Append("\"");
+                components.Append(",\"center\":{\"x\":").Append(JsonUtil.Number(stats.Center.x));
+                components.Append(",\"y\":").Append(JsonUtil.Number(stats.Center.y));
+                components.Append(",\"z\":").Append(JsonUtil.Number(stats.Center.z)).Append("}}");
+
+                emitted++;
+                firstComponent = false;
+            }
+
+            private static bool IsRoadSegment(NetSegment segment)
+            {
+                return (segment.m_flags & NetSegment.Flags.Created) != NetSegment.Flags.None &&
+                    segment.Info != null &&
+                    segment.Info.m_class != null &&
+                    segment.Info.m_class.m_service == ItemClass.Service.Road;
+            }
+
+            private static bool IsOutsideNode(NetManager manager, ushort nodeId)
+            {
+                NetNode node = manager.m_nodes.m_buffer[nodeId];
+                if ((node.m_flags & NetNode.Flags.Created) == NetNode.Flags.None)
+                {
+                    return false;
+                }
+
+                string flags = node.m_flags.ToString();
+                if (ContainsIgnoreCase(flags, "Outside"))
+                {
+                    return true;
+                }
+
+                Vector3 position = node.m_position;
+                return Mathf.Abs(position.x) >= 8600f || Mathf.Abs(position.z) >= 8600f;
+            }
+
+            private static ushort GetSegmentId(NetNode node, int index)
+            {
+                if (index == 0) return node.m_segment0;
+                if (index == 1) return node.m_segment1;
+                if (index == 2) return node.m_segment2;
+                if (index == 3) return node.m_segment3;
+                if (index == 4) return node.m_segment4;
+                if (index == 5) return node.m_segment5;
+                if (index == 6) return node.m_segment6;
+                return node.m_segment7;
+            }
+
+            private static bool ContainsIgnoreCase(string text, string value)
+            {
+                return text != null && text.IndexOf(value, System.StringComparison.OrdinalIgnoreCase) >= 0;
+            }
+
+            private sealed class ComponentStats
+            {
+                public int ComponentId;
+                public int SegmentCount;
+                public int AgentNamedSegments;
+                public int NonHighwaySegments;
+                public int OutsideNodes;
+                public bool OutsideConnected;
+                public bool IsLocalRoadComponent;
+                public ushort SampleSegmentId;
+                public string SampleName = "";
+                public Vector3 Center = Vector3.zero;
             }
         }
 
