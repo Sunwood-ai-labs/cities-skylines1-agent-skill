@@ -11,3 +11,4 @@ docs/.vitepress/dist/
 *.log
 screen-*.png
 local.props
+tmp/parameter-logs/
