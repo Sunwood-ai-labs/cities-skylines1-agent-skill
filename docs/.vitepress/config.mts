@@ -20,6 +20,7 @@ export default defineConfig({
       { text: 'Guide', link: '/guide/getting-started' },
       { text: 'API', link: '/api' },
       { text: 'Releases', link: '/releases/v0.1.0/' },
+      { text: 'Development', link: '/guide/development-flow' },
       { text: 'Japanese', link: '/ja/' },
       { text: 'GitHub', link: 'https://github.com/Sunwood-ai-labs/cities-skylines1-agent-skill' }
     ],
@@ -29,6 +30,7 @@ export default defineConfig({
         items: [
           { text: 'Getting Started', link: '/guide/getting-started' },
           { text: 'Agent Workflow', link: '/guide/usage' },
+          { text: 'Development Flow', link: '/guide/development-flow' },
           { text: 'Architecture', link: '/guide/architecture' },
           { text: 'Troubleshooting', link: '/guide/troubleshooting' }
         ]
@@ -65,6 +67,7 @@ export default defineConfig({
           { text: 'ガイド', link: '/ja/guide/getting-started' },
           { text: 'API', link: '/ja/api' },
           { text: 'リリース', link: '/ja/releases/v0.1.0/' },
+          { text: '開発フロー', link: '/ja/guide/development-flow' },
           { text: 'English', link: '/' },
           { text: 'GitHub', link: 'https://github.com/Sunwood-ai-labs/cities-skylines1-agent-skill' }
         ],
@@ -74,6 +77,7 @@ export default defineConfig({
             items: [
               { text: 'はじめに', link: '/ja/guide/getting-started' },
               { text: 'エージェント運用', link: '/ja/guide/usage' },
+              { text: '開発フロー', link: '/ja/guide/development-flow' },
               { text: '構成', link: '/ja/guide/architecture' },
               { text: 'トラブルシュート', link: '/ja/guide/troubleshooting' }
             ]

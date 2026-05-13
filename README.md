@@ -11,7 +11,8 @@
 <p align="center">
   <a href="README.ja.md">日本語 README</a> ·
   <a href="https://sunwood-ai-labs.github.io/cities-skylines1-agent-skill/">Docs</a> ·
-  <a href="docs/api.md">API Reference</a>
+  <a href="docs/api.md">API Reference</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a>
 </p>
 
 <p align="center">
@@ -73,6 +74,8 @@ Enable the mod in the CS1 content manager, load a city, then test:
 Invoke-RestMethod http://127.0.0.1:32123/health
 Invoke-RestMethod http://127.0.0.1:32123/state/summary
 ```
+
+Development uses a lightweight Git Flow model: feature branches target `develop`, while releases and hotfixes target `main`. See [CONTRIBUTING.md](CONTRIBUTING.md) for the branch and AI review workflow.
 
 For the normal agent loop, resume the newest local save:
 

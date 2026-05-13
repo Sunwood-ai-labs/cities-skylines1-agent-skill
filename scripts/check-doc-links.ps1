@@ -9,10 +9,14 @@ if (!(Test-Path -LiteralPath $docs)) {
     throw "docs directory was not found: $docs"
 }
 
+$linkableExtensions = @(".md", ".mts", ".json", ".svg")
 $files = Get-ChildItem -LiteralPath $docs -Recurse -File |
-    Where-Object { $_.Extension -in @(".md", ".mts", ".json", ".svg") } |
-    Where-Object { $_.FullName -notmatch "\\.vitepress\\dist\\" -and $_.FullName -notmatch "\\node_modules\\" }
-$readmes = @("README.md", "README.ja.md") |
+    Where-Object {
+        $linkableExtensions -contains $_.Extension -and
+        $_.FullName -notmatch "\\.vitepress\\dist\\" -and
+        $_.FullName -notmatch "\\node_modules\\"
+    }
+$readmes = @("README.md", "README.ja.md", "CONTRIBUTING.md", "CONTRIBUTING.ja.md") |
     ForEach-Object { Join-Path $RepoPath $_ } |
     Where-Object { Test-Path -LiteralPath $_ } |
     ForEach-Object { Get-Item -LiteralPath $_ }
@@ -26,6 +30,13 @@ $vitepressLinkPattern = 'link:\s+[''"]([^''"]+)[''"]'
 
 function Resolve-DocsLink([System.IO.FileInfo]$file, [string]$target) {
     $clean = $target.Trim().Trim('"').Trim("'")
+    if ($clean -match '^<(.+)>$') {
+        $clean = $matches[1].Trim()
+    }
+    elseif ($clean -match '[<>]') {
+        return $null
+    }
+
     if ($clean -match '^(https?:|mailto:|#)') {
         return $null
     }
@@ -45,6 +56,7 @@ function Resolve-DocsLink([System.IO.FileInfo]$file, [string]$target) {
         return $null
     }
 
+    $isRooted = $false
     try {
         $isRooted = [System.IO.Path]::IsPathRooted($clean)
     }
