@@ -53,15 +53,7 @@ namespace SkylinesAgentBridge
 
                 if (!dryRun)
                 {
-                    int rows = block.RowCount;
-                    if (rows <= 0)
-                    {
-                        rows = 4;
-                    }
-                    if (rows > 8)
-                    {
-                        rows = 8;
-                    }
+                    int rows = ZoneHelpers.GetRowCount(block);
 
                     for (int z = 0; z < rows; z++)
                     {
@@ -133,7 +125,7 @@ namespace SkylinesAgentBridge
                     continue;
                 }
 
-                int rows = GetRowCount(block);
+                int rows = ZoneHelpers.GetRowCount(block);
                 bool needsRepair = false;
                 for (int z = 0; z < rows; z++)
                 {
@@ -272,7 +264,7 @@ namespace SkylinesAgentBridge
                         }
                     }
 
-                    int rows = GetRowCount(block);
+                    int rows = ZoneHelpers.GetRowCount(block);
                     for (int z = 0; z < rows; z++)
                     {
                         for (int x = 0; x < 4; x++)
@@ -455,20 +447,6 @@ namespace SkylinesAgentBridge
             return false;
         }
 
-        private static int GetRowCount(ZoneBlock block)
-        {
-            int rows = block.RowCount;
-            if (rows <= 0)
-            {
-                rows = 4;
-            }
-            if (rows > 8)
-            {
-                rows = 8;
-            }
-            return rows;
-        }
-
         private static System.Collections.Generic.Dictionary<string, ZoneClusterRepairStats> BuildZoneClusters(ZoneManager manager, float gridSize)
         {
             System.Collections.Generic.Dictionary<string, ZoneClusterRepairStats> clusters = new System.Collections.Generic.Dictionary<string, ZoneClusterRepairStats>();
@@ -521,7 +499,7 @@ namespace SkylinesAgentBridge
             public void Add(ushort blockId, ZoneBlock block)
             {
                 BlockIds.Add(blockId);
-                int rows = GetRowCount(block);
+                int rows = ZoneHelpers.GetRowCount(block);
                 for (int z = 0; z < rows; z++)
                 {
                     for (int x = 0; x < 4; x++)
