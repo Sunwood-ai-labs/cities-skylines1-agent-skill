@@ -81,7 +81,8 @@ Scanned entity types:
 ## GET /state/economy
 
 Returns the currently configured tax rates for zoned residential, commercial,
-industrial, and office sub-services across levels.
+industrial, and office sub-services across levels. `aggregateTaxRates` mirrors
+the six tax sliders shown in the CS1 budget UI.
 
 ```powershell
 Invoke-RestMethod http://127.0.0.1:32123/state/economy

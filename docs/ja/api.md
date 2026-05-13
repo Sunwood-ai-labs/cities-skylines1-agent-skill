@@ -72,7 +72,7 @@ building では `Abandoned`、`BurnedDown`、`Collapsed`、`Flooded`、
 
 ## GET /state/economy
 
-住宅・商業・産業・オフィス系ゾーンの税率を返します。
+住宅・商業・産業・オフィス系ゾーンの税率を返します。`aggregateTaxRates` は CS1 の予算 UI に表示される6つの税率スライダーと同じ値です。
 
 ```powershell
 Invoke-RestMethod http://127.0.0.1:32123/state/economy

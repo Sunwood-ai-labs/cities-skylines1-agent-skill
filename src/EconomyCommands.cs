@@ -1,4 +1,5 @@
 using System;
+using System.Reflection;
 using System.Text;
 using ColossalFramework;
 
@@ -39,27 +40,46 @@ namespace SkylinesAgentBridge
             new TaxTarget(ItemClass.Service.Office, ItemClass.SubService.OfficeFinancial)
         };
 
+        private static readonly UiTaxTarget[] UiTaxTargets = new UiTaxTarget[]
+        {
+            new UiTaxTarget(ItemClass.Service.Residential, ItemClass.SubService.ResidentialLow, 40),
+            new UiTaxTarget(ItemClass.Service.Residential, ItemClass.SubService.ResidentialHigh, 45),
+            new UiTaxTarget(ItemClass.Service.Commercial, ItemClass.SubService.CommercialLow, 0),
+            new UiTaxTarget(ItemClass.Service.Commercial, ItemClass.SubService.CommercialHigh, 5),
+            new UiTaxTarget(ItemClass.Service.Industrial, ItemClass.SubService.IndustrialGeneric, 10),
+            new UiTaxTarget(ItemClass.Service.Office, ItemClass.SubService.OfficeGeneric, 35)
+        };
+
         public static CommandResult BuildEconomyJson()
         {
             EconomyManager manager = Singleton<EconomyManager>.instance;
+            int[] rawTaxRates = GetRawTaxRates(manager);
             StringBuilder rates = new StringBuilder();
             StringBuilder aggregateRates = new StringBuilder();
             bool first = true;
             bool firstAggregate = true;
 
-            for (int i = 0; i < TaxTargets.Length; i++)
+            for (int i = 0; i < UiTaxTargets.Length; i++)
             {
-                TaxTarget target = TaxTargets[i];
+                UiTaxTarget target = UiTaxTargets[i];
                 if (!firstAggregate)
                 {
                     aggregateRates.Append(",");
                 }
-                ItemClass aggregateClass = BuildItemClass(target.Service, target.SubService, ItemClass.Level.None);
                 aggregateRates.Append("{\"service\":\"").Append(target.Service.ToString()).Append("\"");
+                aggregateRates.Append(",\"serviceValue\":").Append((int)target.Service);
                 aggregateRates.Append(",\"subService\":\"").Append(target.SubService.ToString()).Append("\"");
-                aggregateRates.Append(",\"rate\":").Append(manager.GetTaxRate(aggregateClass)).Append("}");
+                aggregateRates.Append(",\"subServiceValue\":").Append((int)target.SubService);
+                aggregateRates.Append(",\"level\":\"").Append(ItemClass.Level.None.ToString()).Append("\"");
+                aggregateRates.Append(",\"levelValue\":").Append((int)ItemClass.Level.None);
+                aggregateRates.Append(",\"source\":\"uiTaxSlider\"");
+                aggregateRates.Append(",\"rate\":").Append(GetUiTaxRate(rawTaxRates, target, manager)).Append("}");
                 firstAggregate = false;
+            }
 
+            for (int i = 0; i < TaxTargets.Length; i++)
+            {
+                TaxTarget target = TaxTargets[i];
                 for (int j = 0; j < TaxLevels.Length; j++)
                 {
                     ItemClass.Level level = TaxLevels[j];
@@ -69,8 +89,11 @@ namespace SkylinesAgentBridge
                     }
 
                     rates.Append("{\"service\":\"").Append(target.Service.ToString()).Append("\"");
+                    rates.Append(",\"serviceValue\":").Append((int)target.Service);
                     rates.Append(",\"subService\":\"").Append(target.SubService.ToString()).Append("\"");
+                    rates.Append(",\"subServiceValue\":").Append((int)target.SubService);
                     rates.Append(",\"level\":\"").Append(level.ToString()).Append("\"");
+                    rates.Append(",\"levelValue\":").Append((int)level);
                     rates.Append(",\"rate\":").Append(manager.GetTaxRate(target.Service, target.SubService, level)).Append("}");
                     first = false;
                 }
@@ -102,9 +125,50 @@ namespace SkylinesAgentBridge
             bool hasLevelFilter = TryParseLevel(levelText, out levelFilter);
 
             EconomyManager manager = Singleton<EconomyManager>.instance;
+            int[] rawTaxRates = GetRawTaxRates(manager);
             StringBuilder changed = new StringBuilder();
             bool first = true;
             int changedCount = 0;
+
+            if (rawTaxRates != null)
+            {
+                for (int i = 0; i < UiTaxTargets.Length; i++)
+                {
+                    UiTaxTarget target = UiTaxTargets[i];
+                    if (hasServiceFilter && target.Service != serviceFilter)
+                    {
+                        continue;
+                    }
+                    if (hasSubServiceFilter && target.SubService != subServiceFilter)
+                    {
+                        continue;
+                    }
+
+                    for (int j = 0; j < TaxLevels.Length; j++)
+                    {
+                        ItemClass.Level level = TaxLevels[j];
+                        if (hasLevelFilter && level != levelFilter)
+                        {
+                            continue;
+                        }
+
+                        int index = target.StartIndex + (int)level;
+                        if (index < 0 || index >= rawTaxRates.Length)
+                        {
+                            continue;
+                        }
+
+                        int before = rawTaxRates[index];
+                        if (!dryRun)
+                        {
+                            rawTaxRates[index] = rate;
+                        }
+                        int after = dryRun ? before : rawTaxRates[index];
+                        AppendChangedRate(changed, ref first, new TaxTarget(target.Service, target.SubService), level, "uiTaxSlider", before, after);
+                        changedCount++;
+                    }
+                }
+            }
 
             for (int i = 0; i < TaxTargets.Length; i++)
             {
@@ -120,13 +184,12 @@ namespace SkylinesAgentBridge
 
                 if (!hasLevelFilter)
                 {
-                    ItemClass aggregateClass = BuildItemClass(target.Service, target.SubService, ItemClass.Level.None);
-                    int aggregateBefore = manager.GetTaxRate(aggregateClass);
+                    int aggregateBefore = manager.GetTaxRate(target.Service, target.SubService, ItemClass.Level.None);
                     if (!dryRun)
                     {
-                        manager.SetTaxRate(aggregateClass, rate);
+                        manager.SetTaxRate(target.Service, target.SubService, ItemClass.Level.None, rate);
                     }
-                    int aggregateAfter = dryRun ? aggregateBefore : manager.GetTaxRate(aggregateClass);
+                    int aggregateAfter = dryRun ? aggregateBefore : manager.GetTaxRate(target.Service, target.SubService, ItemClass.Level.None);
                     AppendChangedRate(changed, ref first, target, ItemClass.Level.None, "aggregate", aggregateBefore, aggregateAfter);
                     changedCount++;
                 }
@@ -171,15 +234,6 @@ namespace SkylinesAgentBridge
             return TryParseEnum<ItemClass.Service>(value, out service);
         }
 
-        private static ItemClass BuildItemClass(ItemClass.Service service, ItemClass.SubService subService, ItemClass.Level level)
-        {
-            ItemClass itemClass = new ItemClass();
-            itemClass.m_service = service;
-            itemClass.m_subService = subService;
-            itemClass.m_level = level;
-            return itemClass;
-        }
-
         private static void AppendChangedRate(StringBuilder changed, ref bool first, TaxTarget target, ItemClass.Level level, string scope, int before, int after)
         {
             if (!first)
@@ -193,6 +247,21 @@ namespace SkylinesAgentBridge
             changed.Append(",\"before\":").Append(before);
             changed.Append(",\"after\":").Append(after).Append("}");
             first = false;
+        }
+
+        private static int[] GetRawTaxRates(EconomyManager manager)
+        {
+            FieldInfo field = typeof(EconomyManager).GetField("m_taxRates", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            return field == null ? null : field.GetValue(manager) as int[];
+        }
+
+        private static int GetUiTaxRate(int[] rawTaxRates, UiTaxTarget target, EconomyManager manager)
+        {
+            if (rawTaxRates == null || target.StartIndex < 0 || target.StartIndex >= rawTaxRates.Length)
+            {
+                return manager.GetTaxRate(target.Service, target.SubService, ItemClass.Level.None);
+            }
+            return rawTaxRates[target.StartIndex];
         }
 
         private static bool TryParseSubService(string value, out ItemClass.SubService subService)
@@ -238,6 +307,20 @@ namespace SkylinesAgentBridge
             {
                 Service = service;
                 SubService = subService;
+            }
+        }
+
+        private struct UiTaxTarget
+        {
+            public readonly ItemClass.Service Service;
+            public readonly ItemClass.SubService SubService;
+            public readonly int StartIndex;
+
+            public UiTaxTarget(ItemClass.Service service, ItemClass.SubService subService, int startIndex)
+            {
+                Service = service;
+                SubService = subService;
+                StartIndex = startIndex;
             }
         }
     }
