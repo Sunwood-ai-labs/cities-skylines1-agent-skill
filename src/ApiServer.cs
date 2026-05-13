@@ -115,6 +115,11 @@ namespace SkylinesAgentBridge
                 return RunOnGameThread(request, delegate { return GameState.BuildProblemsJson(limit); });
             }
 
+            if (request.Method == "GET" && request.Path == "/state/demand")
+            {
+                return RunOnGameThread(request, GameState.BuildDemandJson);
+            }
+
             if (request.Method == "GET" && request.Path == "/state/economy")
             {
                 return RunOnGameThread(request, GameState.BuildEconomyJson);
@@ -259,6 +264,7 @@ namespace SkylinesAgentBridge
             {
                 if (request.Path == "/state/summary") return "Read city summary";
                 if (request.Path == "/state/problems") return "Read city problems";
+                if (request.Path == "/state/demand") return "Read zone demand";
                 if (request.Path == "/state/economy") return "Read economy state";
                 if (request.Path == "/state/facilities") return "Read facilities";
                 if (request.Path == "/state/networks") return "Read networks";

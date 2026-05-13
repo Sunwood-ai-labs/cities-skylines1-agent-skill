@@ -31,6 +31,35 @@ namespace SkylinesAgentBridge
             return CommandResult.FromJson(json.ToString());
         }
 
+        public static CommandResult BuildDemandJson()
+        {
+            ZoneManager zones = ZoneManager.instance;
+            StringBuilder json = new StringBuilder();
+            json.Append("{\"ok\":true");
+            json.Append(",\"residential\":").Append(zones.m_residentialDemand);
+            json.Append(",\"commercial\":").Append(zones.m_commercialDemand);
+            json.Append(",\"workplace\":").Append(zones.m_workplaceDemand);
+            json.Append(",\"bars\":[");
+            AppendDemandBar(json, "Residential", "residential", zones.m_residentialDemand, "#7fff00", true);
+            AppendDemandBar(json, "Commercial", "commercial", zones.m_commercialDemand, "#30c8ff", false);
+            AppendDemandBar(json, "Workplace", "workplace", zones.m_workplaceDemand, "#ffd21a", false);
+            json.Append("]}");
+            return CommandResult.FromJson(json.ToString());
+        }
+
+        private static void AppendDemandBar(StringBuilder json, string type, string key, int value, string color, bool first)
+        {
+            if (!first)
+            {
+                json.Append(",");
+            }
+            json.Append("{\"type\":\"").Append(type).Append("\"");
+            json.Append(",\"key\":\"").Append(key).Append("\"");
+            json.Append(",\"value\":").Append(value);
+            json.Append(",\"max\":100");
+            json.Append(",\"color\":\"").Append(color).Append("\"}");
+        }
+
         public static CommandResult BuildRoadPrefabsJson()
         {
             StringBuilder json = new StringBuilder();

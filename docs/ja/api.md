@@ -29,6 +29,14 @@ http://127.0.0.1:32123
 
 ゲーム時刻、build index、ネットワーク数、人口、需要などの小さな都市サマリーを返します。
 
+## GET /state/demand
+
+CS1 UI に表示される3本の需要バー、住宅・商業・職場需要を返します。値は `0..100` です。
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:32123/state/demand
+```
+
 ## GET /prefabs/roads
 
 道路として扱える読み込み済み `NetInfo` prefab を返します。

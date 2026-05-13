@@ -37,6 +37,15 @@ Returns bridge status without requiring a loaded city.
 
 Returns a small city snapshot: game time, build index, network counts, citizen count, and demand values.
 
+## GET /state/demand
+
+Returns the three demand bars shown in the CS1 UI: residential, commercial,
+and workplace demand. Values are `0..100`.
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:32123/state/demand
+```
+
 ## GET /prefabs/roads
 
 Returns loaded `NetInfo` prefabs that look like roads.
