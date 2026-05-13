@@ -19,7 +19,7 @@ export default defineConfig({
     nav: [
       { text: 'Guide', link: '/guide/getting-started' },
       { text: 'API', link: '/api' },
-      { text: 'Releases', link: '/releases/v0.1.0/' },
+      { text: 'Releases', link: '/releases/v0.3.0/' },
       { text: 'Development', link: '/guide/development-flow' },
       { text: 'Japanese', link: '/ja/' },
       { text: 'GitHub', link: 'https://github.com/Sunwood-ai-labs/cities-skylines1-agent-skill' }
@@ -39,7 +39,9 @@ export default defineConfig({
         text: 'Reference',
         items: [
           { text: 'API Reference', link: '/api' },
+          { text: 'Release Notes v0.3.0', link: '/releases/v0.3.0/' },
           { text: 'Release Notes v0.1.0', link: '/releases/v0.1.0/' },
+          { text: 'v0.3.0 Walkthrough', link: '/guide/articles/v0-3-0-agent-city-operations' },
           { text: 'Experiment Article (JA)', link: '/articles/building-cities-skylines-with-ai-agents-ja' }
         ]
       }
@@ -66,7 +68,7 @@ export default defineConfig({
         nav: [
           { text: 'ガイド', link: '/ja/guide/getting-started' },
           { text: 'API', link: '/ja/api' },
-          { text: 'リリース', link: '/ja/releases/v0.1.0/' },
+          { text: 'リリース', link: '/ja/releases/v0.3.0/' },
           { text: '開発フロー', link: '/ja/guide/development-flow' },
           { text: 'English', link: '/' },
           { text: 'GitHub', link: 'https://github.com/Sunwood-ai-labs/cities-skylines1-agent-skill' }
@@ -86,7 +88,9 @@ export default defineConfig({
             text: 'リファレンス',
             items: [
               { text: 'APIリファレンス', link: '/ja/api' },
+              { text: 'リリースノート v0.3.0', link: '/ja/releases/v0.3.0/' },
               { text: 'リリースノート v0.1.0', link: '/ja/releases/v0.1.0/' },
+              { text: 'v0.3.0 解説記事', link: '/ja/guide/articles/v0-3-0-agent-city-operations' },
               { text: '実験記事', link: '/articles/building-cities-skylines-with-ai-agents-ja' }
             ]
           }
