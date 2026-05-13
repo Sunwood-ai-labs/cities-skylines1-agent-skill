@@ -6,8 +6,8 @@
 - release tag: `v0.3.0`
 - compare range: `v0.1.0..v0.3.0`
 - requested outputs: GitHub release body, docs-backed release notes, companion walkthrough article
-- validation commands run: `.\scripts\build.ps1`, `.\scripts\check-doc-links.ps1`, `npm.cmd run build`, `powershell -NoProfile -ExecutionPolicy Bypass -File C:\Users\makim\.codex\skills\gh-release-notes\scripts\verify-svg-assets.ps1 -RepoPath . -Path docs/public/release-header-v0.3.0.svg`, `powershell -NoProfile -ExecutionPolicy Bypass -File C:\Users\makim\.codex\skills\gh-release-notes\scripts\verify-release-qa-inventory.ps1 -RepoPath . -Tag v0.3.0`
-- release URLs: pending publication
+- validation commands run: `.\scripts\build.ps1`, `.\scripts\check-doc-links.ps1`, `npm.cmd run build`, `powershell -NoProfile -ExecutionPolicy Bypass -File C:\Users\makim\.codex\skills\gh-release-notes\scripts\verify-svg-assets.ps1 -RepoPath . -Path docs/public/release-header-v0.3.0.svg`, `powershell -NoProfile -ExecutionPolicy Bypass -File C:\Users\makim\.codex\skills\gh-release-notes\scripts\verify-release-qa-inventory.ps1 -RepoPath . -Tag v0.3.0`, `gh release view v0.3.0 --json tagName,name,url,isDraft,isPrerelease,publishedAt,body`, `Invoke-WebRequest` checks for release docs, articles, and header SVG
+- release URLs: GitHub Release https://github.com/Sunwood-ai-labs/cities-skylines1-agent-skill/releases/tag/v0.3.0, English docs https://sunwood-ai-labs.github.io/cities-skylines1-agent-skill/releases/v0.3.0/, Japanese docs https://sunwood-ai-labs.github.io/cities-skylines1-agent-skill/ja/releases/v0.3.0/
 
 ## Claim Matrix
 
@@ -52,11 +52,11 @@
 | latest_release_links_updated | pass | `docs/.vitepress/config.mts` updated release nav/sidebar links from v0.1.0 to v0.3.0 |
 | svg_assets_validated | pass | Validated `docs/public/release-header-v0.1.0.svg`, `docs/public/agent-bridge-icon.svg`, and `docs/public/release-header-v0.3.0.svg` with `verify-svg-assets.ps1` |
 | docs_assets_committed_before_tag | not_applicable | `v0.3.0` tag already existed before this release-note task; docs collateral is committed before GitHub Release publication |
-| docs_deployed_live | pass | To be verified after docs commit is pushed and Pages finishes |
+| docs_deployed_live | pass | Pages deploy run `25810189260` succeeded and `Invoke-WebRequest` returned 200 for English release notes, Japanese release notes, English article, Japanese article, and `release-header-v0.3.0.svg` |
 | tag_local_remote | pass | `git tag --format` shows local `v0.3.0`; `git push origin v0.3.0` completed before this task |
-| github_release_verified | pass | To be verified with `gh release view v0.3.0` after publication |
+| github_release_verified | pass | `gh release view v0.3.0` returned https://github.com/Sunwood-ai-labs/cities-skylines1-agent-skill/releases/tag/v0.3.0 as a non-draft non-prerelease release |
 | validation_commands_recorded | pass | Release Context records build, docs link, docs build, SVG, and QA validation commands |
-| publish_date_verified | pass | GitHub Release publication timestamp will be sourced from `gh release view v0.3.0 --json publishedAt` after creation |
+| publish_date_verified | pass | `gh release view v0.3.0 --json publishedAt` returned `2026-05-13T15:51:03Z` |
 
 ## Notes
 
