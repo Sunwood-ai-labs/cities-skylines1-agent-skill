@@ -106,9 +106,9 @@ namespace SkylinesAgentBridge
         {
             int rate = (int)JsonUtil.GetNumber(body, "rate", -1f);
             bool dryRun = JsonUtil.GetBool(body, "dryRun", false);
-            string serviceText = JsonUtil.GetString(body, "service", "");
-            string subServiceText = JsonUtil.GetString(body, "subService", "");
-            string levelText = JsonUtil.GetString(body, "level", "");
+            string serviceText = JsonUtil.GetString(body, "service", "").Trim();
+            string subServiceText = JsonUtil.GetString(body, "subService", "").Trim();
+            string levelText = JsonUtil.GetString(body, "level", "").Trim();
 
             if (rate < 0 || rate > 29)
             {
@@ -117,12 +117,24 @@ namespace SkylinesAgentBridge
 
             ItemClass.Service serviceFilter;
             bool hasServiceFilter = TryParseService(serviceText, out serviceFilter);
+            if (IsSpecifiedFilter(serviceText, true) && !hasServiceFilter)
+            {
+                return CommandResult.Fail("Unknown service filter: " + serviceText);
+            }
 
             ItemClass.SubService subServiceFilter;
             bool hasSubServiceFilter = TryParseSubService(subServiceText, out subServiceFilter);
+            if (IsSpecifiedFilter(subServiceText, false) && !hasSubServiceFilter)
+            {
+                return CommandResult.Fail("Unknown subService filter: " + subServiceText);
+            }
 
             ItemClass.Level levelFilter;
             bool hasLevelFilter = TryParseLevel(levelText, out levelFilter);
+            if (IsSpecifiedFilter(levelText, false) && !hasLevelFilter)
+            {
+                return CommandResult.Fail("Unknown level filter: " + levelText);
+            }
 
             EconomyManager manager = Singleton<EconomyManager>.instance;
             int[] rawTaxRates = GetRawTaxRates(manager);
@@ -227,7 +239,7 @@ namespace SkylinesAgentBridge
         private static bool TryParseService(string value, out ItemClass.Service service)
         {
             service = ItemClass.Service.None;
-            if (value == null || value.Length == 0 || value == "All" || value == "Zoned")
+            if (!IsSpecifiedFilter(value, true))
             {
                 return false;
             }
@@ -267,7 +279,7 @@ namespace SkylinesAgentBridge
         private static bool TryParseSubService(string value, out ItemClass.SubService subService)
         {
             subService = ItemClass.SubService.None;
-            if (value == null || value.Length == 0 || value == "All")
+            if (!IsSpecifiedFilter(value, false))
             {
                 return false;
             }
@@ -277,11 +289,20 @@ namespace SkylinesAgentBridge
         private static bool TryParseLevel(string value, out ItemClass.Level level)
         {
             level = ItemClass.Level.None;
-            if (value == null || value.Length == 0 || value == "All")
+            if (!IsSpecifiedFilter(value, false))
             {
                 return false;
             }
             return TryParseEnum<ItemClass.Level>(value, out level);
+        }
+
+        private static bool IsSpecifiedFilter(string value, bool allowZoned)
+        {
+            if (string.IsNullOrEmpty(value) || string.Equals(value, "All", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+            return !allowZoned || !string.Equals(value, "Zoned", StringComparison.OrdinalIgnoreCase);
         }
 
         private static bool TryParseEnum<T>(string value, out T result)

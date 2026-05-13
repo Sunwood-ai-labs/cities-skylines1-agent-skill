@@ -2268,6 +2268,7 @@ namespace SkylinesAgentBridge
             {
                 ComponentStats stats = new ComponentStats();
                 System.Collections.Generic.Queue<ushort> queue = new System.Collections.Generic.Queue<ushort>();
+                bool[] visitedNodes = new bool[manager.m_nodes.m_buffer.Length];
                 queue.Enqueue(firstSegment);
                 visited[firstSegment] = true;
 
@@ -2296,8 +2297,8 @@ namespace SkylinesAgentBridge
                     Vector3 middle = segment.m_middlePosition;
                     stats.Center += middle;
 
-                    VisitNode(manager, segment.m_startNode, isRoadSegment, visited, queue, stats);
-                    VisitNode(manager, segment.m_endNode, isRoadSegment, visited, queue, stats);
+                    VisitNode(manager, segment.m_startNode, isRoadSegment, visited, visitedNodes, queue, stats);
+                    VisitNode(manager, segment.m_endNode, isRoadSegment, visited, visitedNodes, queue, stats);
                 }
 
                 if (stats.SegmentCount > 0)
@@ -2308,12 +2309,16 @@ namespace SkylinesAgentBridge
                 return stats;
             }
 
-            private void VisitNode(NetManager manager, ushort nodeId, bool[] isRoadSegment, bool[] visited, System.Collections.Generic.Queue<ushort> queue, ComponentStats stats)
+            private void VisitNode(NetManager manager, ushort nodeId, bool[] isRoadSegment, bool[] visited, bool[] visitedNodes, System.Collections.Generic.Queue<ushort> queue, ComponentStats stats)
             {
-                if (IsOutsideNode(manager, nodeId))
+                if (!visitedNodes[nodeId])
                 {
-                    stats.OutsideNodes++;
-                    stats.OutsideConnected = true;
+                    visitedNodes[nodeId] = true;
+                    if (IsOutsideNode(manager, nodeId))
+                    {
+                        stats.OutsideNodes++;
+                        stats.OutsideConnected = true;
+                    }
                 }
 
                 NetNode node = manager.m_nodes.m_buffer[nodeId];
