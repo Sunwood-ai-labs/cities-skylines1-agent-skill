@@ -57,6 +57,8 @@ GET /prefabs/networks?service=Water
 GET /prefabs/buildings?service=Electricity
 ```
 
+既知の壊れた/使用禁止 building asset はこの一覧から除外します。現在は `Block Services - ...` 系を除外します。
+
 ## GET /state/problems
 
 スクリーンショットや画像認識ではなく、CS1 データから問題アイコンを返します。
@@ -180,6 +182,25 @@ Invoke-RestMethod http://127.0.0.1:32123/state/building-anomalies?limit=200
   "position": { "x": 340, "z": 200 },
   "angleDegrees": 180
 }
+```
+
+## POST /commands/set-building-active
+
+既存建物を id 指定でオン/オフします。
+
+```json
+{
+  "id": 123,
+  "active": false
+}
+```
+
+## POST /commands/disable-blocked-assets
+
+CS1 の package asset state 上で既知の壊れたアセットを無効化し、ゲームが使用しないようにします。現在は `Block Services - ...` 系を対象にします。
+
+```powershell
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:32123/commands/disable-blocked-assets
 ```
 
 ## POST /commands/bulldoze

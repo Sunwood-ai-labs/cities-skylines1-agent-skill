@@ -108,7 +108,6 @@ namespace SkylinesAgentBridge
                 {
                     continue;
                 }
-
                 string service = info.m_class.m_service.ToString();
                 if (serviceFilter != null && serviceFilter.Length > 0 && service != serviceFilter)
                 {
@@ -142,6 +141,10 @@ namespace SkylinesAgentBridge
             {
                 BuildingInfo info = PrefabCollection<BuildingInfo>.GetLoaded((uint)i);
                 if (info == null || info.m_class == null)
+                {
+                    continue;
+                }
+                if (AssetPolicy.IsBlockedBuildingPrefab(info))
                 {
                     continue;
                 }
@@ -282,6 +285,9 @@ namespace SkylinesAgentBridge
                 items.Append("{\"id\":").Append(i);
                 items.Append(",\"prefab\":\"").Append(JsonUtil.Escape(info.name)).Append("\"");
                 items.Append(",\"displayName\":\"").Append(JsonUtil.Escape(info.GetUncheckedLocalizedTitle())).Append("\"");
+                items.Append(",\"blockedAsset\":").Append(JsonUtil.Bool(AssetPolicy.IsBlockedBuildingPrefab(info)));
+                items.Append(",\"active\":").Append(JsonUtil.Bool((building.m_flags & Building.Flags.Active) != Building.Flags.None));
+                items.Append(",\"flags\":\"").Append(JsonUtil.Escape(building.m_flags.ToString())).Append("\"");
                 items.Append(",\"service\":\"").Append(JsonUtil.Escape(service)).Append("\"");
                 items.Append(",\"subService\":\"").Append(JsonUtil.Escape(subService)).Append("\"");
                 items.Append(",\"level\":\"").Append(JsonUtil.Escape(info.m_class.m_level.ToString())).Append("\"");

@@ -1,3 +1,4 @@
+using System.Reflection;
 using ColossalFramework;
 using ColossalFramework.Math;
 using UnityEngine;
@@ -22,6 +23,10 @@ namespace SkylinesAgentBridge
             if (info == null)
             {
                 return CommandResult.Fail("Building prefab was not found: " + prefabName);
+            }
+            if (AssetPolicy.IsBlockedBuildingPrefab(info))
+            {
+                return CommandResult.Fail("Building prefab is blocked and must not be used: " + prefabName + " (" + AssetPolicy.BlockReason(prefabName) + ")");
             }
 
             TerrainManager terrain = TerrainManager.instance;
@@ -87,6 +92,10 @@ namespace SkylinesAgentBridge
             {
                 return CommandResult.Fail("Building prefab info was not found for building: " + id);
             }
+            if (AssetPolicy.IsBlockedBuildingPrefab(info))
+            {
+                return CommandResult.Fail("Building prefab is blocked and must not be used for move/recreate: " + info.name + " (" + AssetPolicy.BlockReason(info.name) + ")");
+            }
 
             Vector3 position = ReadPoint(body, "position");
             TerrainManager terrain = TerrainManager.instance;
@@ -130,6 +139,68 @@ namespace SkylinesAgentBridge
 
             Debug.Log("[SkylinesAgentBridge] Moved building " + id + " to " + newBuildingId + " with prefab " + info.name);
             return CommandResult.FromJson(json);
+        }
+
+        public static CommandResult SetBuildingActive(string body)
+        {
+            ushort id = (ushort)JsonUtil.GetNumber(body, "id", 0f);
+            bool active = JsonUtil.GetBool(body, "active", true);
+
+            if (id == 0)
+            {
+                return CommandResult.Fail("id is required.");
+            }
+
+            BuildingManager buildings = BuildingManager.instance;
+            Building building = buildings.m_buildings.m_buffer[id];
+            if ((building.m_flags & Building.Flags.Created) == Building.Flags.None)
+            {
+                return CommandResult.Fail("Building was not found: " + id);
+            }
+
+            Building.Flags before = building.m_flags;
+            BuildingInfo info = building.Info;
+            if (info != null && info.m_buildingAI != null)
+            {
+                InvokeManualActivation(info.m_buildingAI, id, ref building, active);
+            }
+
+            if (active)
+            {
+                building.m_flags |= Building.Flags.Active;
+            }
+            else
+            {
+                building.m_flags &= ~Building.Flags.Active;
+            }
+            buildings.m_buildings.m_buffer[id] = building;
+
+            string prefab = info == null ? "" : info.name;
+            string json = "{\"ok\":true,\"id\":" + id +
+                ",\"active\":" + JsonUtil.Bool(active) +
+                ",\"prefab\":\"" + JsonUtil.Escape(prefab) + "\"" +
+                ",\"beforeFlags\":\"" + JsonUtil.Escape(before.ToString()) + "\"" +
+                ",\"afterFlags\":\"" + JsonUtil.Escape(building.m_flags.ToString()) + "\"}";
+            Debug.Log("[SkylinesAgentBridge] Set building " + id + " active=" + active);
+            return CommandResult.FromJson(json);
+        }
+
+        private static void InvokeManualActivation(BuildingAI ai, ushort id, ref Building building, bool active)
+        {
+            string methodName = active ? "ManualActivation" : "ManualDeactivation";
+            MethodInfo method = ai.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (method == null)
+            {
+                method = typeof(BuildingAI).GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            }
+            if (method == null)
+            {
+                return;
+            }
+
+            object[] args = new object[] { id, building };
+            method.Invoke(ai, args);
+            building = (Building)args[1];
         }
 
         private static Vector3 ReadPoint(string body, string name)

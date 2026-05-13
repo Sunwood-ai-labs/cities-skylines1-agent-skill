@@ -66,6 +66,9 @@ Returns loaded building prefabs. Optional service filter:
 GET /prefabs/buildings?service=Electricity
 ```
 
+Known broken/blocked building assets are omitted from this list. The current
+blocked family is `Block Services - ...`.
+
 ## GET /state/problems
 
 Returns in-game notification/problem icons from CS1 data, without using screenshots or computer vision.
@@ -290,6 +293,26 @@ from save operations so agents can make small, explicit repair steps.
   "position": { "x": 340, "z": 200 },
   "angleDegrees": 180
 }
+```
+
+## POST /commands/set-building-active
+
+Turns an existing building on or off by id.
+
+```json
+{
+  "id": 123,
+  "active": false
+}
+```
+
+## POST /commands/disable-blocked-assets
+
+Disables known broken assets in CS1's package asset state so the game should not
+use them. The current blocked family is `Block Services - ...`.
+
+```powershell
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:32123/commands/disable-blocked-assets
 ```
 
 ## POST /commands/bulldoze

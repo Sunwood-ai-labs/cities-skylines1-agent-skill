@@ -207,6 +207,17 @@ namespace SkylinesAgentBridge
                 return RunOnGameThread(request, delegate { return BuildingCommands.MoveBuilding(body); });
             }
 
+            if (request.Method == "POST" && request.Path == "/commands/set-building-active")
+            {
+                string body = request.Body;
+                return RunOnGameThread(request, delegate { return BuildingCommands.SetBuildingActive(body); });
+            }
+
+            if (request.Method == "POST" && request.Path == "/commands/disable-blocked-assets")
+            {
+                return RunOnGameThread(request, AssetCommands.DisableBlockedAssets);
+            }
+
             if (request.Method == "POST" && request.Path == "/commands/set-simulation-speed")
             {
                 string body = request.Body;
@@ -296,6 +307,16 @@ namespace SkylinesAgentBridge
             if (request.Path == "/commands/move-building")
             {
                 return "Move building #" + ((int)JsonUtil.GetNumber(body, "id", 0f)).ToString();
+            }
+
+            if (request.Path == "/commands/set-building-active")
+            {
+                return "Set building active #" + ((int)JsonUtil.GetNumber(body, "id", 0f)).ToString();
+            }
+
+            if (request.Path == "/commands/disable-blocked-assets")
+            {
+                return "Disable blocked assets";
             }
 
             if (request.Path == "/commands/bulldoze")

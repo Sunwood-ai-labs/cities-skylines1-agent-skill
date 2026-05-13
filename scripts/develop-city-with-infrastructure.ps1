@@ -66,12 +66,12 @@ Build-Network "Power Line" 400 80 240 80 "Agent Power Loop 2"
 
 Write-Host "Placing basic city services"
 Place-Building "711884134.Koban Police Box_Data" 200 200 180
-Place-Building "1691800474.Block Services - Fire_Data" 260 200 180
-Place-Building "1691802727.Block Services - Health_Data" 340 200 180
-Place-Building "1692831837.Block Services - Elementary_Data" 440 200 180
-Place-Building "1691797536.Block Services - Death_Data" 500 200 180
-Place-Building "1691801543.Block Services - Garbage_Data" 540 200 180
-Place-Building "1691801543.Block Services - Garbage_Data" 500 260 180
+Place-Building "Fire House" 260 200 180
+Place-Building "Medical Clinic" 340 200 180
+Place-Building "Elementary School" 440 200 180
+Place-Building "Cemetery" 500 200 180
+Place-Building "Landfill Site" 540 200 180
+Place-Building "Landfill Site" 500 260 180
 Place-Building "Boiler Station" 360 220 180
 Build-Network "Heating Pipe" 120 (-220) 120 200 "Agent Heating Trunk"
 Build-Network "Heating Pipe" 120 (-120) 520 (-120) "Agent Heating West-East -120"
