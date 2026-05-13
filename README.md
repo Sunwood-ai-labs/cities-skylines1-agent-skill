@@ -29,7 +29,7 @@ The goal is simple: stop relying on screenshots for city state. The bridge expos
 ## ✨ What It Does
 
 - Runs a CS1 mod that listens on `http://127.0.0.1:32123`.
-- Exposes city state APIs for problems, facilities, networks, road anomalies, building placement anomalies, saves, and prefabs.
+- Exposes city state APIs for problems, facilities, networks, road anomalies, building placement anomalies, zoning anomalies, saves, and prefabs.
 - Exposes focused command APIs for network creation, zoning, building placement, building movement, bulldozing, simulation speed, batch helpers, and saving.
 - Shows in-game API activity in a persistent console with timestamps, clear, and minimize controls.
 - Includes Windows scripts for building the mod, launching Resume, starting a fresh map, inspecting issues, repairing bounded anomalies, and saving.
@@ -109,6 +109,7 @@ Read APIs:
 - `GET /state/networks`
 - `GET /state/road-anomalies`
 - `GET /state/building-anomalies`
+- `GET /state/zone-anomalies`
 - `GET /state/saves`
 - `GET /prefabs/roads`
 - `GET /prefabs/networks`

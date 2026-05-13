@@ -208,6 +208,24 @@ using screenshots.
 Invoke-RestMethod http://127.0.0.1:32123/state/building-anomalies?limit=200
 ```
 
+## GET /state/zone-anomalies
+
+Detects mottled zoning from CS1 zone blocks without using screenshots. This is
+useful when circular or overlapping zone paint leaves residential, commercial,
+industrial, office, and unzoned cells mixed inside the same block.
+
+```powershell
+Invoke-RestMethod "http://127.0.0.1:32123/state/zone-anomalies?limit=200&includeUnzonedHoles=true"
+```
+
+Detected anomaly types:
+
+- `mixedZoneBlock`: one zoning block contains multiple non-empty zone types,
+  such as residential cells mixed with commercial or industrial cells.
+- `patchyUnzonedHoles`: one zoning block is mostly one zone type but contains
+  many unzoned cells, which often means an agent left visible holes after
+  repainting.
+
 ## POST /commands/build-network
 
 Generic network creation. Use this for roads, water pipes, heating pipes, and

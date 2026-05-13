@@ -52,6 +52,7 @@ Invoke-RestMethod "http://127.0.0.1:32123/state/problems?limit=200"
 Invoke-RestMethod "http://127.0.0.1:32123/state/economy"
 Invoke-RestMethod "http://127.0.0.1:32123/state/road-anomalies?limit=500&nearMissDistance=18&shortSegmentLength=32&includeDeadEnds=false"
 Invoke-RestMethod "http://127.0.0.1:32123/state/building-anomalies?limit=200"
+Invoke-RestMethod "http://127.0.0.1:32123/state/zone-anomalies?limit=200&includeUnzonedHoles=true"
 Invoke-RestMethod "http://127.0.0.1:32123/state/facilities?limit=500"
 Invoke-RestMethod "http://127.0.0.1:32123/state/networks?limit=1000&service=Road"
 ```
@@ -122,3 +123,4 @@ Invoke-RestMethod http://127.0.0.1:32123/state/saves
 - Heating service buildings may create an actual connection helper offset from the building center. Query `/state/facilities?service=Water&includeMapObjects=true` when diagnosing heating pipe issues.
 - Roads that look connected to highways can still have separate nodes. Use `/state/road-anomalies` and rebuild with endpoints close enough to reuse the existing road nodes.
 - Do not treat all dead ends as errors. Use bounded checks or `includeDeadEnds=false` unless the user asks to remove cul-de-sacs/stubs.
+- Use `/state/zone-anomalies` when zone colors look mottled or circular paint left residential/commercial/industrial/office cells mixed in the same block.

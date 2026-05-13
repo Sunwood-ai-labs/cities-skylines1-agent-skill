@@ -482,6 +482,30 @@ namespace SkylinesAgentBridge
             return CommandResult.FromJson(collector.ToJson());
         }
 
+        public static CommandResult BuildZoneAnomaliesJson(int limit, int minMinorityCells, int minUnzonedCells, bool includeUnzonedHoles)
+        {
+            if (limit < 0)
+            {
+                limit = 0;
+            }
+            if (limit > 1000)
+            {
+                limit = 1000;
+            }
+            if (minMinorityCells < 1)
+            {
+                minMinorityCells = 1;
+            }
+            if (minUnzonedCells < 1)
+            {
+                minUnzonedCells = 1;
+            }
+
+            ZoneAnomalyCollector collector = new ZoneAnomalyCollector(limit, minMinorityCells, minUnzonedCells, includeUnzonedHoles);
+            collector.Collect();
+            return CommandResult.FromJson(collector.ToJson());
+        }
+
         private static bool IsCityFacilityService(string service)
         {
             return service == "Water" ||
@@ -498,6 +522,184 @@ namespace SkylinesAgentBridge
         {
             return info != null &&
                 (info.name == "Water Pipe Junction" || info.name == "Heating Pipe Junction");
+        }
+
+        private sealed class ZoneAnomalyCollector
+        {
+            private readonly int limit;
+            private readonly int minMinorityCells;
+            private readonly int minUnzonedCells;
+            private readonly bool includeUnzonedHoles;
+            private readonly StringBuilder items = new StringBuilder();
+            private readonly System.Collections.Generic.Dictionary<string, int> countByType = new System.Collections.Generic.Dictionary<string, int>();
+            private int total;
+            private int emitted;
+            private bool firstItem = true;
+
+            public ZoneAnomalyCollector(int limit, int minMinorityCells, int minUnzonedCells, bool includeUnzonedHoles)
+            {
+                this.limit = limit;
+                this.minMinorityCells = minMinorityCells;
+                this.minUnzonedCells = minUnzonedCells;
+                this.includeUnzonedHoles = includeUnzonedHoles;
+            }
+
+            public void Collect()
+            {
+                ZoneManager manager = ZoneManager.instance;
+                for (ushort blockId = 1; blockId < manager.m_blocks.m_buffer.Length; blockId++)
+                {
+                    ZoneBlock block = manager.m_blocks.m_buffer[blockId];
+                    if ((block.m_flags & ZoneBlock.FLAG_CREATED) == 0)
+                    {
+                        continue;
+                    }
+
+                    AnalyzeBlock(blockId, block);
+                }
+            }
+
+            public string ToJson()
+            {
+                StringBuilder counts = new StringBuilder();
+                bool first = true;
+                foreach (System.Collections.Generic.KeyValuePair<string, int> pair in countByType)
+                {
+                    if (!first)
+                    {
+                        counts.Append(",");
+                    }
+                    counts.Append("\"").Append(JsonUtil.Escape(pair.Key)).Append("\":").Append(pair.Value);
+                    first = false;
+                }
+
+                return "{\"ok\":true,\"total\":" + total +
+                    ",\"returned\":" + emitted +
+                    ",\"limit\":" + limit +
+                    ",\"minMinorityCells\":" + minMinorityCells +
+                    ",\"minUnzonedCells\":" + minUnzonedCells +
+                    ",\"includeUnzonedHoles\":" + JsonUtil.Bool(includeUnzonedHoles) +
+                    ",\"counts\":{" + counts.ToString() + "}" +
+                    ",\"anomalies\":[" + items.ToString() + "]}";
+            }
+
+            private void AnalyzeBlock(ushort blockId, ZoneBlock block)
+            {
+                int rows = block.RowCount;
+                if (rows <= 0)
+                {
+                    rows = 4;
+                }
+                if (rows > 8)
+                {
+                    rows = 8;
+                }
+
+                int cellCount = rows * 4;
+                int unzonedCells = 0;
+                int zonedCells = 0;
+                int dominantCount = 0;
+                string dominantZone = "Unzoned";
+                System.Collections.Generic.Dictionary<string, int> counts = new System.Collections.Generic.Dictionary<string, int>();
+
+                for (int z = 0; z < rows; z++)
+                {
+                    for (int x = 0; x < 4; x++)
+                    {
+                        ItemClass.Zone zone = block.GetZone(x, z);
+                        string zoneName = zone.ToString();
+                        if (counts.ContainsKey(zoneName))
+                        {
+                            counts[zoneName]++;
+                        }
+                        else
+                        {
+                            counts[zoneName] = 1;
+                        }
+
+                        if (zone == ItemClass.Zone.Unzoned)
+                        {
+                            unzonedCells++;
+                            continue;
+                        }
+
+                        zonedCells++;
+                        if (counts[zoneName] > dominantCount)
+                        {
+                            dominantCount = counts[zoneName];
+                            dominantZone = zoneName;
+                        }
+                    }
+                }
+
+                int distinctZoned = 0;
+                foreach (System.Collections.Generic.KeyValuePair<string, int> pair in counts)
+                {
+                    if (pair.Key != "Unzoned" && pair.Value > 0)
+                    {
+                        distinctZoned++;
+                    }
+                }
+
+                int minorityCells = zonedCells - dominantCount;
+                if (distinctZoned > 1 && minorityCells >= minMinorityCells)
+                {
+                    Add(blockId, block, "mixedZoneBlock", rows, cellCount, zonedCells, unzonedCells, dominantZone, minorityCells, counts);
+                }
+                else if (includeUnzonedHoles && distinctZoned == 1 && zonedCells >= minMinorityCells && unzonedCells >= minUnzonedCells)
+                {
+                    Add(blockId, block, "patchyUnzonedHoles", rows, cellCount, zonedCells, unzonedCells, dominantZone, unzonedCells, counts);
+                }
+            }
+
+            private void Add(ushort blockId, ZoneBlock block, string type, int rows, int cellCount, int zonedCells, int unzonedCells, string dominantZone, int suspiciousCells, System.Collections.Generic.Dictionary<string, int> zoneCounts)
+            {
+                total++;
+                if (countByType.ContainsKey(type))
+                {
+                    countByType[type]++;
+                }
+                else
+                {
+                    countByType[type] = 1;
+                }
+
+                if (emitted >= limit)
+                {
+                    return;
+                }
+
+                if (!firstItem)
+                {
+                    items.Append(",");
+                }
+
+                items.Append("{\"type\":\"").Append(type).Append("\"");
+                items.Append(",\"blockId\":").Append(blockId);
+                items.Append(",\"rowCount\":").Append(rows);
+                items.Append(",\"cellCount\":").Append(cellCount);
+                items.Append(",\"zonedCells\":").Append(zonedCells);
+                items.Append(",\"unzonedCells\":").Append(unzonedCells);
+                items.Append(",\"dominantZone\":\"").Append(JsonUtil.Escape(dominantZone)).Append("\"");
+                items.Append(",\"suspiciousCells\":").Append(suspiciousCells);
+                items.Append(",\"zoneCounts\":{");
+                bool first = true;
+                foreach (System.Collections.Generic.KeyValuePair<string, int> pair in zoneCounts)
+                {
+                    if (!first)
+                    {
+                        items.Append(",");
+                    }
+                    items.Append("\"").Append(JsonUtil.Escape(pair.Key)).Append("\":").Append(pair.Value);
+                    first = false;
+                }
+                items.Append("}");
+                items.Append(",\"position\":{\"x\":").Append(JsonUtil.Number(block.m_position.x));
+                items.Append(",\"y\":").Append(JsonUtil.Number(block.m_position.y));
+                items.Append(",\"z\":").Append(JsonUtil.Number(block.m_position.z)).Append("}}");
+                emitted++;
+                firstItem = false;
+            }
         }
 
         private sealed class BuildingAnomalyCollector

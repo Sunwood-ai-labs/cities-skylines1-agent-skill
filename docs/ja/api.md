@@ -127,6 +127,20 @@ Invoke-RestMethod "http://127.0.0.1:32123/state/road-anomalies?nearMissDistance=
 Invoke-RestMethod http://127.0.0.1:32123/state/building-anomalies?limit=200
 ```
 
+## GET /state/zone-anomalies
+
+CS1 の zoning block を直接読み、斑になった区画をスクリーンショットなしで検出します。
+円形塗りや重ね塗りのあとに、住宅・商業・産業・オフィス・未指定が同じブロック内で混ざった状態を拾うための API です。
+
+```powershell
+Invoke-RestMethod "http://127.0.0.1:32123/state/zone-anomalies?limit=200&includeUnzonedHoles=true"
+```
+
+検出する anomaly type:
+
+- `mixedZoneBlock`: 1つの zoning block 内に、住宅と商業など複数のゾーン種別が混ざっている。
+- `patchyUnzonedHoles`: ほぼ1種類のゾーンだが未指定セルが多く、塗り残しの穴に見えやすい。
+
 ## POST /commands/build-network
 
 道路、配管、暖房管、電線を作成する汎用 network 作成 API です。初期互換のため、request field は `roadPrefab` のままです。

@@ -155,6 +155,15 @@ namespace SkylinesAgentBridge
                 return RunOnGameThread(request, delegate { return GameState.BuildBuildingAnomaliesJson(limit); });
             }
 
+            if (request.Method == "GET" && request.Path == "/state/zone-anomalies")
+            {
+                int limit = request.GetQueryInt("limit", 200);
+                int minMinorityCells = request.GetQueryInt("minMinorityCells", 3);
+                int minUnzonedCells = request.GetQueryInt("minUnzonedCells", 6);
+                bool includeUnzonedHoles = request.GetQueryString("includeUnzonedHoles", "true") == "true";
+                return RunOnGameThread(request, delegate { return GameState.BuildZoneAnomaliesJson(limit, minMinorityCells, minUnzonedCells, includeUnzonedHoles); });
+            }
+
             if (request.Method == "GET" && request.Path == "/state/saves")
             {
                 return RunOnGameThread(request, SaveCommands.ListSaves);
@@ -281,6 +290,7 @@ namespace SkylinesAgentBridge
                 if (request.Path == "/state/networks") return "Read networks";
                 if (request.Path == "/state/road-anomalies") return "Inspect road anomalies";
                 if (request.Path == "/state/building-anomalies") return "Inspect building placement";
+                if (request.Path == "/state/zone-anomalies") return "Inspect zoning anomalies";
                 if (request.Path == "/state/saves") return "List saves";
                 if (request.Path == "/prefabs/roads") return "List road prefabs";
                 if (request.Path == "/prefabs/networks") return "List network prefabs";
