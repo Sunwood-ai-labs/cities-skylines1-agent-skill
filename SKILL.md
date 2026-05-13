@@ -1,6 +1,6 @@
 ---
 name: cities-skylines1-agent-skill
-description: Operate Cities: Skylines 1 through the Skylines Agent Bridge mod and localhost API. Use when Codex needs to build, inspect, repair, resume, save, or continue a CS1 city using focused API calls rather than screenshot recognition, including road connectivity, service infrastructure, zoning, facilities, problem icons, and save verification.
+description: "Operate Cities: Skylines 1 through the Skylines Agent Bridge mod and localhost API. Use when Codex needs to build, inspect, repair, resume, save, or continue a CS1 city using focused API calls rather than screenshot recognition, including road connectivity, service infrastructure, zoning, facilities, problem icons, and save verification."
 ---
 
 # Cities: Skylines 1 Agent Skill
@@ -49,6 +49,7 @@ Use these before acting:
 Invoke-RestMethod http://127.0.0.1:32123/health
 Invoke-RestMethod http://127.0.0.1:32123/state/summary
 Invoke-RestMethod "http://127.0.0.1:32123/state/problems?limit=200"
+Invoke-RestMethod "http://127.0.0.1:32123/state/economy"
 Invoke-RestMethod "http://127.0.0.1:32123/state/road-anomalies?limit=500&nearMissDistance=18&shortSegmentLength=32&includeDeadEnds=false"
 Invoke-RestMethod "http://127.0.0.1:32123/state/building-anomalies?limit=200"
 Invoke-RestMethod "http://127.0.0.1:32123/state/facilities?limit=500"
@@ -99,6 +100,13 @@ Run simulation:
 ```powershell
 $body = @{ paused = $false; speed = 3 } | ConvertTo-Json
 Invoke-RestMethod -Method Post -Uri http://127.0.0.1:32123/commands/set-simulation-speed -Body $body -ContentType "application/json"
+```
+
+Lower taxes when `/state/problems` reports `TaxesTooHigh`:
+
+```powershell
+$body = @{ service = "Commercial"; rate = 9 } | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:32123/commands/set-tax-rate -Body $body -ContentType "application/json"
 ```
 
 Save and verify:

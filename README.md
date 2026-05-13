@@ -104,6 +104,7 @@ Read APIs:
 - `GET /health`
 - `GET /state/summary`
 - `GET /state/problems`
+- `GET /state/economy`
 - `GET /state/facilities`
 - `GET /state/networks`
 - `GET /state/road-anomalies`
@@ -123,6 +124,7 @@ Command APIs:
 - `POST /commands/bulldoze`
 - `POST /commands/save`
 - `POST /commands/set-simulation-speed`
+- `POST /commands/set-tax-rate`
 - `POST /commands/batch` optional convenience wrapper
 
 See [docs/api.md](docs/api.md) for request examples and response shapes.

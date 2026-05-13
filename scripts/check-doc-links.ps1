@@ -9,7 +9,8 @@ if (!(Test-Path -LiteralPath $docs)) {
     throw "docs directory was not found: $docs"
 }
 
-$files = Get-ChildItem -LiteralPath $docs -Recurse -File -Include *.md,*.mts,*.json,*.svg |
+$files = Get-ChildItem -LiteralPath $docs -Recurse -File |
+    Where-Object { $_.Extension -in @(".md", ".mts", ".json", ".svg") } |
     Where-Object { $_.FullName -notmatch "\\.vitepress\\dist\\" -and $_.FullName -notmatch "\\node_modules\\" }
 $readmes = @("README.md", "README.ja.md") |
     ForEach-Object { Join-Path $RepoPath $_ } |
@@ -44,10 +45,17 @@ function Resolve-DocsLink([System.IO.FileInfo]$file, [string]$target) {
         return $null
     }
 
+    try {
+        $isRooted = [System.IO.Path]::IsPathRooted($clean)
+    }
+    catch [System.ArgumentException] {
+        return $null
+    }
+
     $candidate = if ($fromDocsRoot) {
         Join-Path $docs $clean
     }
-    elseif ([System.IO.Path]::IsPathRooted($clean)) {
+    elseif ($isRooted) {
         Join-Path $docs $clean.TrimStart('\')
     }
     else {

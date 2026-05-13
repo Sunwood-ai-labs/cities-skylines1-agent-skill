@@ -65,6 +65,28 @@ Returns in-game notification/problem icons from CS1 data, without using screensh
 GET /state/problems?limit=200
 ```
 
+The response includes both the legacy combined `problems` string and
+structured `problemNames`, `problem1Raw`, `problem2Raw`, and
+`countsByProblem` fields so agents can match individual alerts such as
+`TaxesTooHigh` even when CS1 marks the same building as major or fatal.
+Building rows also surface alert-like flags such as `Abandoned`, `BurnedDown`,
+`Collapsed`, `Flooded`, and `RoadAccessFailed`.
+
+Scanned entity types:
+
+- `building`
+- `netNode`
+- `netSegment`
+
+## GET /state/economy
+
+Returns the currently configured tax rates for zoned residential, commercial,
+industrial, and office sub-services across levels.
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:32123/state/economy
+```
+
 ## GET /state/facilities
 
 Returns current buildings grouped by CS1 service, with optional service
@@ -158,12 +180,6 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\inspect-road-anomali
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\repair-road-anomalies.ps1 `
   -MinX 450 -MaxX 620 -MinZ 90 -MaxZ 250
 ```
-
-Scanned entity types:
-
-- `building`
-- `netNode`
-- `netSegment`
 
 ## GET /state/building-anomalies
 
@@ -316,6 +332,22 @@ Request:
 ```
 
 `speed` is clamped to `0..3`.
+
+## POST /commands/set-tax-rate
+
+Sets tax rates for zoned services. Omit `service`, `subService`, or `level` to
+apply the rate broadly; pass `dryRun: true` to preview the affected tax rows.
+
+```json
+{
+  "dryRun": false,
+  "service": "Commercial",
+  "rate": 9
+}
+```
+
+Useful services are `Residential`, `Commercial`, `Industrial`, and `Office`.
+`rate` must be between `0` and `29`.
 
 ## POST /commands/batch
 

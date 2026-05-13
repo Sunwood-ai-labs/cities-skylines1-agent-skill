@@ -104,6 +104,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-new-map.ps1
 - `GET /health`
 - `GET /state/summary`
 - `GET /state/problems`
+- `GET /state/economy`
 - `GET /state/facilities`
 - `GET /state/networks`
 - `GET /state/road-anomalies`
@@ -123,6 +124,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-new-map.ps1
 - `POST /commands/bulldoze`
 - `POST /commands/save`
 - `POST /commands/set-simulation-speed`
+- `POST /commands/set-tax-rate`
 - `POST /commands/batch` おまけの一括実行
 
 詳細は [docs/ja/api.md](docs/ja/api.md) を参照してください。

@@ -115,6 +115,11 @@ namespace SkylinesAgentBridge
                 return RunOnGameThread(request, delegate { return GameState.BuildProblemsJson(limit); });
             }
 
+            if (request.Method == "GET" && request.Path == "/state/economy")
+            {
+                return RunOnGameThread(request, GameState.BuildEconomyJson);
+            }
+
             if (request.Method == "GET" && request.Path == "/state/facilities")
             {
                 int limit = request.GetQueryInt("limit", 500);
@@ -203,6 +208,12 @@ namespace SkylinesAgentBridge
                 return RunOnGameThread(request, delegate { return SimulationCommands.SetSimulationSpeed(body); });
             }
 
+            if (request.Method == "POST" && request.Path == "/commands/set-tax-rate")
+            {
+                string body = request.Body;
+                return RunOnGameThread(request, delegate { return EconomyCommands.SetTaxRate(body); });
+            }
+
             if (request.Method == "POST" && request.Path == "/commands/bulldoze")
             {
                 string body = request.Body;
@@ -248,6 +259,7 @@ namespace SkylinesAgentBridge
             {
                 if (request.Path == "/state/summary") return "Read city summary";
                 if (request.Path == "/state/problems") return "Read city problems";
+                if (request.Path == "/state/economy") return "Read economy state";
                 if (request.Path == "/state/facilities") return "Read facilities";
                 if (request.Path == "/state/networks") return "Read networks";
                 if (request.Path == "/state/road-anomalies") return "Inspect road anomalies";
@@ -298,6 +310,11 @@ namespace SkylinesAgentBridge
                     return "Pause simulation";
                 }
                 return "Set simulation speed " + ((int)JsonUtil.GetNumber(body, "speed", 0f)).ToString();
+            }
+
+            if (request.Path == "/commands/set-tax-rate")
+            {
+                return "Set tax rate " + ((int)JsonUtil.GetNumber(body, "rate", 0f)).ToString();
             }
 
             if (request.Path == "/commands/batch")
