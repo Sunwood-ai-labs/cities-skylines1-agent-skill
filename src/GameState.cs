@@ -860,6 +860,8 @@ namespace SkylinesAgentBridge
 
                     AnalyzeBlock(blockId, block);
                 }
+
+                AnalyzeClusters(manager);
             }
 
             public string ToJson()
@@ -1002,6 +1004,209 @@ namespace SkylinesAgentBridge
                 items.Append(",\"z\":").Append(JsonUtil.Number(block.m_position.z)).Append("}}");
                 emitted++;
                 firstItem = false;
+            }
+
+            private void AnalyzeClusters(ZoneManager manager)
+            {
+                System.Collections.Generic.Dictionary<string, ZoneClusterStats> clusters = new System.Collections.Generic.Dictionary<string, ZoneClusterStats>();
+                for (ushort blockId = 1; blockId < manager.m_blocks.m_buffer.Length; blockId++)
+                {
+                    ZoneBlock block = manager.m_blocks.m_buffer[blockId];
+                    if ((block.m_flags & ZoneBlock.FLAG_CREATED) == 0)
+                    {
+                        continue;
+                    }
+
+                    string key = ClusterKey(block.m_position, 80f);
+                    ZoneClusterStats stats;
+                    if (!clusters.TryGetValue(key, out stats))
+                    {
+                        stats = new ZoneClusterStats(key);
+                        clusters[key] = stats;
+                    }
+                    stats.Add(blockId, block);
+                }
+
+                foreach (System.Collections.Generic.KeyValuePair<string, ZoneClusterStats> pair in clusters)
+                {
+                    ZoneClusterStats stats = pair.Value;
+                    if (stats.DistinctZoned > 1 && stats.MinorityCells >= minMinorityCells)
+                    {
+                        AddCluster(stats, "mixedZoneCluster", stats.MinorityCells);
+                    }
+                    else if (includeUnzonedHoles && stats.DistinctZoned == 1 && stats.ZonedCells >= minMinorityCells && stats.UnzonedCells >= minUnzonedCells)
+                    {
+                        AddCluster(stats, "patchyZoneCluster", stats.UnzonedCells);
+                    }
+                }
+            }
+
+            private void AddCluster(ZoneClusterStats stats, string type, int suspiciousCells)
+            {
+                total++;
+                if (countByType.ContainsKey(type))
+                {
+                    countByType[type]++;
+                }
+                else
+                {
+                    countByType[type] = 1;
+                }
+
+                if (emitted >= limit)
+                {
+                    return;
+                }
+
+                if (!firstItem)
+                {
+                    items.Append(",");
+                }
+
+                items.Append("{\"type\":\"").Append(type).Append("\"");
+                items.Append(",\"clusterKey\":\"").Append(JsonUtil.Escape(stats.Key)).Append("\"");
+                items.Append(",\"blockCount\":").Append(stats.BlockCount);
+                items.Append(",\"cellCount\":").Append(stats.CellCount);
+                items.Append(",\"zonedCells\":").Append(stats.ZonedCells);
+                items.Append(",\"unzonedCells\":").Append(stats.UnzonedCells);
+                items.Append(",\"dominantZone\":\"").Append(JsonUtil.Escape(stats.DominantZone)).Append("\"");
+                items.Append(",\"dominantCells\":").Append(stats.DominantCells);
+                items.Append(",\"minorityCells\":").Append(stats.MinorityCells);
+                items.Append(",\"distinctZoned\":").Append(stats.DistinctZoned);
+                items.Append(",\"suspiciousCells\":").Append(suspiciousCells);
+                items.Append(",\"zoneCounts\":{");
+                bool first = true;
+                foreach (System.Collections.Generic.KeyValuePair<string, int> count in stats.ZoneCounts)
+                {
+                    if (!first)
+                    {
+                        items.Append(",");
+                    }
+                    items.Append("\"").Append(JsonUtil.Escape(count.Key)).Append("\":").Append(count.Value);
+                    first = false;
+                }
+                items.Append("}");
+                items.Append(",\"position\":{\"x\":").Append(JsonUtil.Number(stats.Center.x));
+                items.Append(",\"y\":").Append(JsonUtil.Number(stats.Center.y));
+                items.Append(",\"z\":").Append(JsonUtil.Number(stats.Center.z)).Append("}");
+                items.Append(",\"bounds\":{\"minX\":").Append(JsonUtil.Number(stats.MinX));
+                items.Append(",\"maxX\":").Append(JsonUtil.Number(stats.MaxX));
+                items.Append(",\"minZ\":").Append(JsonUtil.Number(stats.MinZ));
+                items.Append(",\"maxZ\":").Append(JsonUtil.Number(stats.MaxZ)).Append("}}");
+                emitted++;
+                firstItem = false;
+            }
+
+            private static string ClusterKey(Vector3 position, float gridSize)
+            {
+                int x = Mathf.FloorToInt((position.x + gridSize * 0.5f) / gridSize);
+                int z = Mathf.FloorToInt((position.z + gridSize * 0.5f) / gridSize);
+                return x.ToString() + ":" + z.ToString();
+            }
+
+            private sealed class ZoneClusterStats
+            {
+                public readonly string Key;
+                public readonly System.Collections.Generic.Dictionary<string, int> ZoneCounts = new System.Collections.Generic.Dictionary<string, int>();
+                public int BlockCount;
+                public int CellCount;
+                public int ZonedCells;
+                public int UnzonedCells;
+                public int DominantCells;
+                public int DistinctZoned;
+                public int MinorityCells;
+                public string DominantZone = "Unzoned";
+                public float MinX = float.MaxValue;
+                public float MaxX = float.MinValue;
+                public float MinZ = float.MaxValue;
+                public float MaxZ = float.MinValue;
+                private Vector3 positionSum = Vector3.zero;
+
+                public ZoneClusterStats(string key)
+                {
+                    Key = key;
+                }
+
+                public Vector3 Center
+                {
+                    get
+                    {
+                        return BlockCount == 0 ? Vector3.zero : positionSum / BlockCount;
+                    }
+                }
+
+                public void Add(ushort blockId, ZoneBlock block)
+                {
+                    BlockCount++;
+                    positionSum += block.m_position;
+                    MinX = Mathf.Min(MinX, block.m_position.x);
+                    MaxX = Mathf.Max(MaxX, block.m_position.x);
+                    MinZ = Mathf.Min(MinZ, block.m_position.z);
+                    MaxZ = Mathf.Max(MaxZ, block.m_position.z);
+
+                    int rows = block.RowCount;
+                    if (rows <= 0)
+                    {
+                        rows = 4;
+                    }
+                    if (rows > 8)
+                    {
+                        rows = 8;
+                    }
+
+                    for (int z = 0; z < rows; z++)
+                    {
+                        for (int x = 0; x < 4; x++)
+                        {
+                            ItemClass.Zone zone = block.GetZone(x, z);
+                            string zoneName = zone.ToString();
+                            if (ZoneCounts.ContainsKey(zoneName))
+                            {
+                                ZoneCounts[zoneName]++;
+                            }
+                            else
+                            {
+                                ZoneCounts[zoneName] = 1;
+                            }
+
+                            CellCount++;
+                            if (zone == ItemClass.Zone.Unzoned)
+                            {
+                                UnzonedCells++;
+                            }
+                            else
+                            {
+                                ZonedCells++;
+                            }
+                        }
+                    }
+
+                    Recalculate();
+                }
+
+                private void Recalculate()
+                {
+                    DominantCells = 0;
+                    DominantZone = "Unzoned";
+                    DistinctZoned = 0;
+
+                    foreach (System.Collections.Generic.KeyValuePair<string, int> pair in ZoneCounts)
+                    {
+                        if (pair.Key == "Unzoned")
+                        {
+                            continue;
+                        }
+
+                        DistinctZoned++;
+                        if (pair.Value > DominantCells)
+                        {
+                            DominantCells = pair.Value;
+                            DominantZone = pair.Key;
+                        }
+                    }
+
+                    MinorityCells = ZonedCells - DominantCells;
+                }
             }
         }
 

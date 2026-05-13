@@ -333,6 +333,23 @@ office building. Blocks with ambiguous mixed-use occupancy are skipped.
 }
 ```
 
+## POST /commands/repair-zone-clusters
+
+Repairs larger 80m zoning clusters when a whole city block is visually mottled.
+The command can fill unzoned holes and, by default, prefers the nearest existing
+growable building's zone for occupied blocks so cluster repair does not blindly
+convert developed buildings to the cluster's dominant zone.
+
+```json
+{
+  "dryRun": true,
+  "includePatchy": true,
+  "fillUnzoned": true,
+  "preferGrowableZone": true,
+  "gridSize": 80
+}
+```
+
 ## POST /commands/place-building
 
 Request:

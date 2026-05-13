@@ -228,6 +228,12 @@ namespace SkylinesAgentBridge
                 return RunOnGameThread(request, delegate { return ZoneCommands.RepairZonesToGrowables(body); });
             }
 
+            if (request.Method == "POST" && request.Path == "/commands/repair-zone-clusters")
+            {
+                string body = request.Body;
+                return RunOnGameThread(request, delegate { return ZoneCommands.RepairZoneClusters(body); });
+            }
+
             if (request.Method == "POST" && request.Path == "/commands/place-building")
             {
                 string body = request.Body;
@@ -339,6 +345,11 @@ namespace SkylinesAgentBridge
             if (request.Path == "/commands/repair-zones-to-growables")
             {
                 return "Repair zones to growables";
+            }
+
+            if (request.Path == "/commands/repair-zone-clusters")
+            {
+                return "Repair zone clusters";
             }
 
             if (request.Path == "/commands/place-building")

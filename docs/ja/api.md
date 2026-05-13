@@ -213,6 +213,21 @@ Invoke-RestMethod "http://127.0.0.1:32123/state/zone-anomalies?limit=200&include
 }
 ```
 
+## POST /commands/repair-zone-clusters
+
+街区全体がまだらに見える 80m 単位の zoning cluster を修復します。
+未ゾーン穴を埋められます。既定では既存 growable 建物がある block では最寄り建物のゾーンを優先し、街区の支配色だけで発展済み建物を別用途に変えないようにします。
+
+```json
+{
+  "dryRun": true,
+  "includePatchy": true,
+  "fillUnzoned": true,
+  "preferGrowableZone": true,
+  "gridSize": 80
+}
+```
+
 ## POST /commands/place-building
 
 指定 prefab の建物を配置します。

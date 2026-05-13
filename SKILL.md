@@ -128,3 +128,4 @@ Invoke-RestMethod http://127.0.0.1:32123/state/saves
 - Do not treat all dead ends as errors. Use bounded checks or `includeDeadEnds=false` unless the user asks to remove cul-de-sacs/stubs.
 - Use `/state/zone-anomalies` when zone colors look mottled or circular paint left residential/commercial/industrial/office cells mixed in the same block.
 - `/commands/set-zone` defaults to `preserveOccupied=true`; check `/state/growables` first and keep that flag enabled unless the user explicitly wants to repaint developed blocks.
+- If screenshots show blue/green/yellow mottling across a whole city block, use `/state/zone-anomalies` and repair with `/commands/repair-zone-clusters` using `preferGrowableZone=true`.
