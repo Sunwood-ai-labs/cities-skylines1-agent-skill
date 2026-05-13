@@ -37,6 +37,14 @@ CS1 UI に表示される3本の需要バー、住宅・商業・職場需要を
 Invoke-RestMethod http://127.0.0.1:32123/state/demand
 ```
 
+## GET /state/zones
+
+ゾーン種別ごとのセル数と概算面積を返します。CS1 の zoning cell は 8m x 8m として扱い、`areaSquareMeters` は住宅・商業・産業・オフィス・未指定の面積比較に使うための概算値です。
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:32123/state/zones
+```
+
 ## GET /prefabs/roads
 
 道路として扱える読み込み済み `NetInfo` prefab を返します。

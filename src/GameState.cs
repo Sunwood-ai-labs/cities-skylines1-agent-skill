@@ -47,6 +47,81 @@ namespace SkylinesAgentBridge
             return CommandResult.FromJson(json.ToString());
         }
 
+        public static CommandResult BuildZonesJson()
+        {
+            ZoneManager manager = ZoneManager.instance;
+            System.Collections.Generic.Dictionary<string, int> counts = new System.Collections.Generic.Dictionary<string, int>();
+            int createdBlocks = 0;
+            int totalCells = 0;
+            int zonedCells = 0;
+
+            for (ushort blockId = 1; blockId < manager.m_blocks.m_buffer.Length; blockId++)
+            {
+                ZoneBlock block = manager.m_blocks.m_buffer[blockId];
+                if ((block.m_flags & ZoneBlock.FLAG_CREATED) == 0)
+                {
+                    continue;
+                }
+
+                createdBlocks++;
+                int rows = block.RowCount;
+                if (rows <= 0)
+                {
+                    rows = 4;
+                }
+                if (rows > 8)
+                {
+                    rows = 8;
+                }
+
+                for (int z = 0; z < rows; z++)
+                {
+                    for (int x = 0; x < 4; x++)
+                    {
+                        ItemClass.Zone zone = block.GetZone(x, z);
+                        string zoneName = zone.ToString();
+                        if (counts.ContainsKey(zoneName))
+                        {
+                            counts[zoneName]++;
+                        }
+                        else
+                        {
+                            counts[zoneName] = 1;
+                        }
+
+                        totalCells++;
+                        if (zone != ItemClass.Zone.Unzoned)
+                        {
+                            zonedCells++;
+                        }
+                    }
+                }
+            }
+
+            StringBuilder zoneItems = new StringBuilder();
+            bool first = true;
+            foreach (System.Collections.Generic.KeyValuePair<string, int> pair in counts)
+            {
+                if (!first)
+                {
+                    zoneItems.Append(",");
+                }
+                AppendZoneSummary(zoneItems, pair.Key, pair.Value);
+                first = false;
+            }
+
+            StringBuilder json = new StringBuilder();
+            json.Append("{\"ok\":true");
+            json.Append(",\"zoneBlockCount\":").Append(createdBlocks);
+            json.Append(",\"cellSizeMeters\":8");
+            json.Append(",\"cellAreaSquareMeters\":64");
+            json.Append(",\"totalCells\":").Append(totalCells);
+            json.Append(",\"zonedCells\":").Append(zonedCells);
+            json.Append(",\"zonedAreaSquareMeters\":").Append(zonedCells * 64);
+            json.Append(",\"zones\":[").Append(zoneItems.ToString()).Append("]}");
+            return CommandResult.FromJson(json.ToString());
+        }
+
         private static void AppendDemandBar(StringBuilder json, string type, string key, int value, string color, bool first)
         {
             if (!first)
@@ -58,6 +133,15 @@ namespace SkylinesAgentBridge
             json.Append(",\"value\":").Append(value);
             json.Append(",\"max\":100");
             json.Append(",\"color\":\"").Append(color).Append("\"}");
+        }
+
+        private static void AppendZoneSummary(StringBuilder json, string zoneName, int cells)
+        {
+            json.Append("{\"zone\":\"").Append(JsonUtil.Escape(zoneName)).Append("\"");
+            json.Append(",\"cells\":").Append(cells);
+            json.Append(",\"areaSquareMeters\":").Append(cells * 64);
+            json.Append(",\"areaHectares\":").Append(JsonUtil.Number(cells * 0.0064f));
+            json.Append("}");
         }
 
         public static CommandResult BuildRoadPrefabsJson()

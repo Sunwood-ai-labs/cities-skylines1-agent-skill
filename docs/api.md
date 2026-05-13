@@ -46,6 +46,16 @@ and workplace demand. Values are `0..100`.
 Invoke-RestMethod http://127.0.0.1:32123/state/demand
 ```
 
+## GET /state/zones
+
+Returns zoning cell counts and approximate area by zone type. CS1 zoning cells
+are reported as 8m x 8m cells, so `areaSquareMeters` is approximate but useful
+for comparing residential, commercial, industrial, office, and unzoned area.
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:32123/state/zones
+```
+
 ## GET /prefabs/roads
 
 Returns loaded `NetInfo` prefabs that look like roads.

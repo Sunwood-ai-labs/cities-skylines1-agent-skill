@@ -104,6 +104,7 @@ Read APIs:
 - `GET /health`
 - `GET /state/summary`
 - `GET /state/problems`
+- `GET /state/zones`
 - `GET /state/economy`
 - `GET /state/facilities`
 - `GET /state/networks`
