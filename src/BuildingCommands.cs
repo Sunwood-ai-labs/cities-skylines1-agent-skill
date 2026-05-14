@@ -129,6 +129,7 @@ namespace SkylinesAgentBridge
             }
 
             simulation.m_currentBuildIndex += 1u;
+            ReassignTransportLineDepot(id, newBuildingId);
             GameThreadHelpers.ReleaseBuilding(buildings, id);
 
             string json = "{\"ok\":true,\"dryRun\":false,\"oldBuildingId\":" + id +
@@ -140,6 +141,32 @@ namespace SkylinesAgentBridge
 
             Debug.Log("[SkylinesAgentBridge] Moved building " + id + " to " + newBuildingId + " with prefab " + info.name);
             return CommandResult.FromJson(json);
+        }
+
+        private static void ReassignTransportLineDepot(ushort oldBuildingId, ushort newBuildingId)
+        {
+            TransportManager transport = Singleton<TransportManager>.instance;
+            if (transport == null)
+            {
+                return;
+            }
+
+            for (ushort lineId = 1; lineId < transport.m_lines.m_buffer.Length; lineId++)
+            {
+                TransportLine line = transport.m_lines.m_buffer[lineId];
+                if ((line.m_flags & TransportLine.Flags.Created) == TransportLine.Flags.None)
+                {
+                    continue;
+                }
+
+                if (line.m_building != oldBuildingId)
+                {
+                    continue;
+                }
+
+                line.m_building = newBuildingId;
+                transport.m_lines.m_buffer[lineId] = line;
+            }
         }
 
         public static CommandResult SetBuildingActive(string body)

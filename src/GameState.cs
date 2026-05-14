@@ -390,6 +390,10 @@ namespace SkylinesAgentBridge
                 {
                     continue;
                 }
+                if ((building.m_flags & Building.Flags.Deleted) != Building.Flags.None)
+                {
+                    continue;
+                }
 
                 BuildingInfo info = building.Info;
                 if (info == null || info.m_class == null)
@@ -524,6 +528,10 @@ namespace SkylinesAgentBridge
             {
                 Building building = manager.m_buildings.m_buffer[i];
                 if ((building.m_flags & Building.Flags.Created) == Building.Flags.None)
+                {
+                    continue;
+                }
+                if ((building.m_flags & Building.Flags.Deleted) != Building.Flags.None)
                 {
                     continue;
                 }
@@ -703,6 +711,155 @@ namespace SkylinesAgentBridge
                 ",\"segments\":[" + items.ToString() + "]}");
         }
 
+        public static CommandResult BuildNetworkSegmentDetailsJson(ushort segmentId)
+        {
+            if (segmentId == 0)
+            {
+                return CommandResult.Fail("id is required.");
+            }
+
+            NetManager manager = NetManager.instance;
+            if (segmentId >= manager.m_segments.m_buffer.Length)
+            {
+                return CommandResult.Fail("Network segment is out of range: " + segmentId);
+            }
+
+            NetSegment segment = manager.m_segments.m_buffer[segmentId];
+            if ((segment.m_flags & NetSegment.Flags.Created) == NetSegment.Flags.None)
+            {
+                return CommandResult.Fail("Network segment was not found: " + segmentId);
+            }
+
+            NetInfo info = segment.Info;
+            if (info == null)
+            {
+                return CommandResult.Fail("Network segment has no prefab info: " + segmentId);
+            }
+
+            StringBuilder prefabLanes = new StringBuilder();
+            if (info.m_lanes != null)
+            {
+                for (int i = 0; i < info.m_lanes.Length; i++)
+                {
+                    NetInfo.Lane lane = info.m_lanes[i];
+                    if (i > 0)
+                    {
+                        prefabLanes.Append(",");
+                    }
+
+                    prefabLanes.Append("{\"index\":").Append(i);
+                    prefabLanes.Append(",\"laneType\":\"").Append(JsonUtil.Escape(lane.m_laneType.ToString())).Append("\"");
+                    prefabLanes.Append(",\"vehicleType\":\"").Append(JsonUtil.Escape(lane.m_vehicleType.ToString())).Append("\"");
+                    prefabLanes.Append(",\"direction\":\"").Append(JsonUtil.Escape(lane.m_direction.ToString())).Append("\"");
+                    prefabLanes.Append(",\"finalDirection\":\"").Append(JsonUtil.Escape(lane.m_finalDirection.ToString())).Append("\"");
+                    prefabLanes.Append(",\"stopType\":\"").Append(JsonUtil.Escape(lane.m_stopType.ToString())).Append("\"");
+                    prefabLanes.Append(",\"position\":").Append(JsonUtil.Number(lane.m_position)).Append("}");
+                }
+            }
+
+            StringBuilder actualLanes = new StringBuilder();
+            uint laneId = segment.m_lanes;
+            int actualLaneIndex = 0;
+            while (laneId != 0 && actualLaneIndex < 32)
+            {
+                NetLane lane = manager.m_lanes.m_buffer[laneId];
+                if (actualLaneIndex > 0)
+                {
+                    actualLanes.Append(",");
+                }
+
+                actualLanes.Append("{\"laneId\":").Append(laneId);
+                actualLanes.Append(",\"index\":").Append(actualLaneIndex);
+                actualLanes.Append(",\"nextLaneId\":").Append(lane.m_nextLane).Append("}");
+                laneId = lane.m_nextLane;
+                actualLaneIndex++;
+            }
+
+            ushort startNodeId = segment.m_startNode;
+            ushort endNodeId = segment.m_endNode;
+            Vector3 start = manager.m_nodes.m_buffer[startNodeId].m_position;
+            Vector3 end = manager.m_nodes.m_buffer[endNodeId].m_position;
+            string problems = segment.m_problems.IsNone ? "" : segment.m_problems.ToString();
+
+            StringBuilder json = new StringBuilder();
+            json.Append("{\"ok\":true");
+            json.Append(",\"id\":").Append(segmentId);
+            json.Append(",\"prefab\":\"").Append(JsonUtil.Escape(info.name)).Append("\"");
+            json.Append(",\"service\":\"").Append(JsonUtil.Escape(info.m_class == null ? "" : info.m_class.m_service.ToString())).Append("\"");
+            json.Append(",\"subService\":\"").Append(JsonUtil.Escape(info.m_class == null ? "" : info.m_class.m_subService.ToString())).Append("\"");
+            json.Append(",\"flags\":\"").Append(JsonUtil.Escape(segment.m_flags.ToString())).Append("\"");
+            json.Append(",\"problems\":\"").Append(JsonUtil.Escape(problems)).Append("\"");
+            json.Append(",\"startNodeId\":").Append(startNodeId);
+            json.Append(",\"endNodeId\":").Append(endNodeId);
+            json.Append(",\"start\":{\"x\":").Append(JsonUtil.Number(start.x)).Append(",\"y\":").Append(JsonUtil.Number(start.y)).Append(",\"z\":").Append(JsonUtil.Number(start.z)).Append("}");
+            json.Append(",\"end\":{\"x\":").Append(JsonUtil.Number(end.x)).Append(",\"y\":").Append(JsonUtil.Number(end.y)).Append(",\"z\":").Append(JsonUtil.Number(end.z)).Append("}");
+            json.Append(",\"prefabLaneCount\":").Append(info.m_lanes == null ? 0 : info.m_lanes.Length);
+            json.Append(",\"actualLaneCount\":").Append(actualLaneIndex);
+            json.Append(",\"prefabLanes\":[").Append(prefabLanes.ToString()).Append("]");
+            json.Append(",\"actualLanes\":[").Append(actualLanes.ToString()).Append("]}");
+            return CommandResult.FromJson(json.ToString());
+        }
+
+        public static CommandResult BuildNetworkNodeDetailsJson(ushort nodeId)
+        {
+            if (nodeId == 0)
+            {
+                return CommandResult.Fail("id is required.");
+            }
+
+            NetManager manager = NetManager.instance;
+            if (nodeId >= manager.m_nodes.m_buffer.Length)
+            {
+                return CommandResult.Fail("Network node is out of range: " + nodeId);
+            }
+
+            NetNode node = manager.m_nodes.m_buffer[nodeId];
+            if ((node.m_flags & NetNode.Flags.Created) == NetNode.Flags.None)
+            {
+                return CommandResult.Fail("Network node was not found: " + nodeId);
+            }
+
+            NetInfo info = node.Info;
+            string problems = node.m_problems.IsNone ? "" : node.m_problems.ToString();
+            StringBuilder segments = new StringBuilder();
+            for (int i = 0; i < 8; i++)
+            {
+                ushort segmentId = node.GetSegment(i);
+                if (segmentId == 0)
+                {
+                    continue;
+                }
+
+                NetSegment segment = manager.m_segments.m_buffer[segmentId];
+                NetInfo segmentInfo = segment.Info;
+                if (segments.Length > 0)
+                {
+                    segments.Append(",");
+                }
+
+                segments.Append("{\"id\":").Append(segmentId);
+                segments.Append(",\"prefab\":\"").Append(JsonUtil.Escape(segmentInfo == null ? "" : segmentInfo.name)).Append("\"");
+                segments.Append(",\"startNodeId\":").Append(segment.m_startNode);
+                segments.Append(",\"endNodeId\":").Append(segment.m_endNode).Append("}");
+            }
+
+            Vector3 position = node.m_position;
+            StringBuilder json = new StringBuilder();
+            json.Append("{\"ok\":true");
+            json.Append(",\"id\":").Append(nodeId);
+            json.Append(",\"prefab\":\"").Append(JsonUtil.Escape(info == null ? "" : info.name)).Append("\"");
+            json.Append(",\"service\":\"").Append(JsonUtil.Escape(info == null || info.m_class == null ? "" : info.m_class.m_service.ToString())).Append("\"");
+            json.Append(",\"subService\":\"").Append(JsonUtil.Escape(info == null || info.m_class == null ? "" : info.m_class.m_subService.ToString())).Append("\"");
+            json.Append(",\"flags\":\"").Append(JsonUtil.Escape(node.m_flags.ToString())).Append("\"");
+            json.Append(",\"problems\":\"").Append(JsonUtil.Escape(problems)).Append("\"");
+            json.Append(",\"connectCount\":").Append(node.CountSegments());
+            json.Append(",\"position\":{\"x\":").Append(JsonUtil.Number(position.x));
+            json.Append(",\"y\":").Append(JsonUtil.Number(position.y));
+            json.Append(",\"z\":").Append(JsonUtil.Number(position.z)).Append("}");
+            json.Append(",\"segments\":[").Append(segments.ToString()).Append("]}");
+            return CommandResult.FromJson(json.ToString());
+        }
+
         public static CommandResult BuildRoadAnomaliesJson(int limit, float nearMissDistance, float shortSegmentLength, bool includeDeadEnds)
         {
             if (limit < 0)
@@ -743,7 +900,7 @@ namespace SkylinesAgentBridge
             return CommandResult.FromJson(collector.ToJson());
         }
 
-        public static CommandResult BuildBuildingAnomaliesJson(int limit)
+        public static CommandResult BuildBuildingAnomaliesJson(int limit, float roadClearance, bool includeOriginal)
         {
             if (limit < 0)
             {
@@ -753,8 +910,16 @@ namespace SkylinesAgentBridge
             {
                 limit = 1000;
             }
+            if (roadClearance < 0f)
+            {
+                roadClearance = 0f;
+            }
+            if (roadClearance > 50f)
+            {
+                roadClearance = 50f;
+            }
 
-            BuildingAnomalyCollector collector = new BuildingAnomalyCollector(limit);
+            BuildingAnomalyCollector collector = new BuildingAnomalyCollector(limit, roadClearance, includeOriginal);
             collector.Collect();
             return CommandResult.FromJson(collector.ToJson());
         }
@@ -1205,14 +1370,20 @@ namespace SkylinesAgentBridge
         private sealed class BuildingAnomalyCollector
         {
             private readonly int limit;
+            private readonly float roadClearance;
+            private readonly bool includeOriginal;
             private readonly StringBuilder items = new StringBuilder();
+            private readonly System.Collections.Generic.Dictionary<string, int> countByType = new System.Collections.Generic.Dictionary<string, int>();
+            private readonly System.Collections.Generic.Dictionary<string, int> countByService = new System.Collections.Generic.Dictionary<string, int>();
             private int total;
             private int emitted;
             private bool firstItem = true;
 
-            public BuildingAnomalyCollector(int limit)
+            public BuildingAnomalyCollector(int limit, float roadClearance, bool includeOriginal)
             {
                 this.limit = limit;
+                this.roadClearance = roadClearance;
+                this.includeOriginal = includeOriginal;
             }
 
             public void Collect()
@@ -1224,6 +1395,10 @@ namespace SkylinesAgentBridge
                 {
                     Building building = buildings.m_buildings.m_buffer[buildingId];
                     if ((building.m_flags & Building.Flags.Created) == Building.Flags.None)
+                    {
+                        continue;
+                    }
+                    if ((building.m_flags & Building.Flags.Deleted) != Building.Flags.None)
                     {
                         continue;
                     }
@@ -1239,11 +1414,14 @@ namespace SkylinesAgentBridge
                         continue;
                     }
 
-                    if (!IsCityFacilityService(buildingInfo.m_class.m_service.ToString()))
+                    if (!IsBuildingAnomalyTarget(building, buildingInfo, includeOriginal))
                     {
                         continue;
                     }
 
+                    ushort nearSegmentId = 0;
+                    float nearestDistance = float.MaxValue;
+                    bool foundOverlap = false;
                     for (ushort segmentId = 1; segmentId < net.m_segments.m_buffer.Length; segmentId++)
                     {
                         NetSegment segment = net.m_segments.m_buffer[segmentId];
@@ -1256,9 +1434,25 @@ namespace SkylinesAgentBridge
                         Vector3 end = net.m_nodes.m_buffer[segment.m_endNode].m_position;
                         if (RoadCrossesBuildingFootprint(building, buildingInfo, start, end))
                         {
-                            AddRoadOverlap(buildingId, building, buildingInfo, segmentId);
+                            AddRoadAnomaly("buildingRoadOverlap", buildingId, building, buildingInfo, segmentId, 0f);
+                            foundOverlap = true;
                             break;
                         }
+
+                        if (roadClearance > 0f)
+                        {
+                            float distance = DistanceRoadCenterlineToBuildingFootprint(building, buildingInfo, start, end);
+                            if (distance <= roadClearance && distance < nearestDistance)
+                            {
+                                nearestDistance = distance;
+                                nearSegmentId = segmentId;
+                            }
+                        }
+                    }
+
+                    if (!foundOverlap && nearSegmentId != 0)
+                    {
+                        AddRoadAnomaly("buildingRoadTooClose", buildingId, building, buildingInfo, nearSegmentId, nearestDistance);
                     }
                 }
             }
@@ -1268,13 +1462,40 @@ namespace SkylinesAgentBridge
                 return "{\"ok\":true,\"total\":" + total +
                     ",\"returned\":" + emitted +
                     ",\"limit\":" + limit +
-                    ",\"counts\":{\"buildingRoadOverlap\":" + total + "}" +
+                    ",\"roadClearance\":" + JsonUtil.Number(roadClearance) +
+                    ",\"includeOriginal\":" + JsonUtil.Bool(includeOriginal) +
+                    ",\"counts\":{" + CountsJson() + "}" +
+                    ",\"countsByService\":{" + CountMapJson(countByService) + "}" +
                     ",\"anomalies\":[" + items.ToString() + "]}";
             }
 
-            private void AddRoadOverlap(ushort buildingId, Building building, BuildingInfo info, ushort segmentId)
+            private string CountsJson()
+            {
+                return CountMapJson(countByType);
+            }
+
+            private static string CountMapJson(System.Collections.Generic.Dictionary<string, int> counts)
+            {
+                StringBuilder json = new StringBuilder();
+                bool first = true;
+                foreach (System.Collections.Generic.KeyValuePair<string, int> pair in counts)
+                {
+                    if (!first)
+                    {
+                        json.Append(",");
+                    }
+
+                    json.Append("\"").Append(JsonUtil.Escape(pair.Key)).Append("\":").Append(pair.Value);
+                    first = false;
+                }
+                return json.ToString();
+            }
+
+            private void AddRoadAnomaly(string type, ushort buildingId, Building building, BuildingInfo info, ushort segmentId, float roadCenterlineDistance)
             {
                 total++;
+                Increment(countByType, type);
+                Increment(countByService, info.m_class.m_service.ToString());
                 if (emitted >= limit)
                 {
                     return;
@@ -1286,12 +1507,17 @@ namespace SkylinesAgentBridge
                 }
 
                 Vector3 position = building.m_position;
-                items.Append("{\"type\":\"buildingRoadOverlap\"");
+                items.Append("{\"type\":\"").Append(JsonUtil.Escape(type)).Append("\"");
                 items.Append(",\"buildingId\":").Append(buildingId);
                 items.Append(",\"segmentId\":").Append(segmentId);
                 items.Append(",\"prefab\":\"").Append(JsonUtil.Escape(info.name)).Append("\"");
                 items.Append(",\"displayName\":\"").Append(JsonUtil.Escape(info.GetUncheckedLocalizedTitle())).Append("\"");
                 items.Append(",\"service\":\"").Append(JsonUtil.Escape(info.m_class.m_service.ToString())).Append("\"");
+                items.Append(",\"widthCells\":").Append(info.GetWidth());
+                items.Append(",\"lengthCells\":").Append(info.GetLength());
+                items.Append(",\"angleDegrees\":").Append(JsonUtil.Number(building.m_angle * Mathf.Rad2Deg));
+                items.Append(",\"roadCenterlineDistance\":").Append(JsonUtil.Number(roadCenterlineDistance));
+                items.Append(",\"roadClearance\":").Append(JsonUtil.Number(roadClearance));
                 items.Append(",\"position\":{\"x\":").Append(JsonUtil.Number(position.x));
                 items.Append(",\"y\":").Append(JsonUtil.Number(position.y));
                 items.Append(",\"z\":").Append(JsonUtil.Number(position.z)).Append("}}");
@@ -1307,6 +1533,15 @@ namespace SkylinesAgentBridge
                 Vector2 end = ToLocal(building, roadEnd);
 
                 return SegmentIntersectsAabb(start, end, -halfWidth, halfWidth, -halfLength, halfLength);
+            }
+
+            private static float DistanceRoadCenterlineToBuildingFootprint(Building building, BuildingInfo info, Vector3 roadStart, Vector3 roadEnd)
+            {
+                float halfWidth = Mathf.Max(1f, info.GetWidth() * 4f - 1.5f);
+                float halfLength = Mathf.Max(1f, info.GetLength() * 4f - 1.5f);
+                Vector2 start = ToLocal(building, roadStart);
+                Vector2 end = ToLocal(building, roadEnd);
+                return DistanceSegmentToAabb(start, end, -halfWidth, halfWidth, -halfLength, halfLength);
             }
 
             private static Vector2 ToLocal(Building building, Vector3 point)
@@ -1352,12 +1587,107 @@ namespace SkylinesAgentBridge
                 return true;
             }
 
+            private static float DistanceSegmentToAabb(Vector2 start, Vector2 end, float minX, float maxX, float minY, float maxY)
+            {
+                if (SegmentIntersectsAabb(start, end, minX, maxX, minY, maxY))
+                {
+                    return 0f;
+                }
+
+                float distance = Mathf.Min(DistancePointToAabb(start, minX, maxX, minY, maxY), DistancePointToAabb(end, minX, maxX, minY, maxY));
+                distance = Mathf.Min(distance, DistancePointToSegment(new Vector2(minX, minY), start, end));
+                distance = Mathf.Min(distance, DistancePointToSegment(new Vector2(minX, maxY), start, end));
+                distance = Mathf.Min(distance, DistancePointToSegment(new Vector2(maxX, minY), start, end));
+                distance = Mathf.Min(distance, DistancePointToSegment(new Vector2(maxX, maxY), start, end));
+                return distance;
+            }
+
+            private static float DistancePointToAabb(Vector2 point, float minX, float maxX, float minY, float maxY)
+            {
+                float dx = 0f;
+                if (point.x < minX)
+                {
+                    dx = minX - point.x;
+                }
+                else if (point.x > maxX)
+                {
+                    dx = point.x - maxX;
+                }
+
+                float dy = 0f;
+                if (point.y < minY)
+                {
+                    dy = minY - point.y;
+                }
+                else if (point.y > maxY)
+                {
+                    dy = point.y - maxY;
+                }
+
+                return Mathf.Sqrt(dx * dx + dy * dy);
+            }
+
+            private static float DistancePointToSegment(Vector2 point, Vector2 start, Vector2 end)
+            {
+                float dx = end.x - start.x;
+                float dy = end.y - start.y;
+                float lengthSq = dx * dx + dy * dy;
+                if (lengthSq < 0.0001f)
+                {
+                    return Distance(point, start);
+                }
+
+                float t = ((point.x - start.x) * dx + (point.y - start.y) * dy) / lengthSq;
+                t = Mathf.Clamp01(t);
+                return Distance(point, new Vector2(start.x + dx * t, start.y + dy * t));
+            }
+
+            private static float Distance(Vector2 a, Vector2 b)
+            {
+                float dx = a.x - b.x;
+                float dy = a.y - b.y;
+                return Mathf.Sqrt(dx * dx + dy * dy);
+            }
+
             private static bool IsCreatedRoadSegment(NetSegment segment)
             {
                 return (segment.m_flags & NetSegment.Flags.Created) != NetSegment.Flags.None &&
                     segment.Info != null &&
                     segment.Info.m_class != null &&
                     segment.Info.m_class.m_service == ItemClass.Service.Road;
+            }
+
+            private static bool IsBuildingAnomalyTarget(Building building, BuildingInfo info, bool includeOriginal)
+            {
+                if (info == null || info.m_class == null)
+                {
+                    return false;
+                }
+
+                if (!includeOriginal && (building.m_flags & Building.Flags.Original) != Building.Flags.None)
+                {
+                    return false;
+                }
+                if ((building.m_flags & Building.Flags.Deleted) != Building.Flags.None)
+                {
+                    return false;
+                }
+
+                ItemClass.Service service = info.m_class.m_service;
+                return service == ItemClass.Service.Residential ||
+                    service == ItemClass.Service.Commercial ||
+                    service == ItemClass.Service.Industrial ||
+                    service == ItemClass.Service.Office ||
+                    service == ItemClass.Service.Education ||
+                    service == ItemClass.Service.FireDepartment ||
+                    service == ItemClass.Service.PoliceDepartment ||
+                    service == ItemClass.Service.HealthCare ||
+                    service == ItemClass.Service.Garbage ||
+                    service == ItemClass.Service.Water ||
+                    service == ItemClass.Service.Electricity ||
+                    service == ItemClass.Service.PublicTransport ||
+                    service == ItemClass.Service.Beautification ||
+                    service == ItemClass.Service.Disaster;
             }
         }
 
@@ -2526,6 +2856,10 @@ namespace SkylinesAgentBridge
                 {
                     Building building = manager.m_buildings.m_buffer[i];
                     if ((building.m_flags & Building.Flags.Created) == Building.Flags.None)
+                    {
+                        continue;
+                    }
+                    if ((building.m_flags & Building.Flags.Deleted) != Building.Flags.None)
                     {
                         continue;
                     }

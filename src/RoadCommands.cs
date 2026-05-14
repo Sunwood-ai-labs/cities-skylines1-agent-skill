@@ -11,6 +11,7 @@ namespace SkylinesAgentBridge
             bool dryRun = JsonUtil.GetBool(body, "dryRun", false);
             string prefabName = JsonUtil.GetString(body, "roadPrefab", "Basic Road");
             string name = JsonUtil.GetString(body, "name", "");
+            float heightOffset = JsonUtil.GetNumber(body, "heightOffset", 0f);
 
             Vector3 start = ReadPoint(body, "start");
             Vector3 end = ReadPoint(body, "end");
@@ -29,18 +30,37 @@ namespace SkylinesAgentBridge
             TerrainManager terrain = TerrainManager.instance;
             start.y = terrain.SampleRawHeightSmoothWithWater(start, false, 0f);
             end.y = terrain.SampleRawHeightSmoothWithWater(end, false, 0f);
+            if (heightOffset < -64f)
+            {
+                heightOffset = -64f;
+            }
+            else if (heightOffset > 64f)
+            {
+                heightOffset = 64f;
+            }
+            start.y += heightOffset;
+            end.y += heightOffset;
+
+            NetManager net = NetManager.instance;
+            ushort startNode = FindNearbyNode(start, 2f, info);
+            ushort endNode = FindNearbyNode(end, 2f, info);
+            bool requiresExistingUndergroundMetroNodes = IsMetroBuildProtected(info, prefabName) && heightOffset > -8f;
+            if (requiresExistingUndergroundMetroNodes && (startNode == 0 || endNode == 0))
+            {
+                return CommandResult.Fail("Metro track creation at terrain height is blocked. Use an underground heightOffset or connect to existing metro station/track nodes.");
+            }
 
             if (dryRun)
             {
-                return CommandResult.FromJson("{\"ok\":true,\"dryRun\":true,\"message\":\"Build-road validation passed.\",\"roadPrefab\":\"" + JsonUtil.Escape(prefabName) + "\"}");
+                return CommandResult.FromJson("{\"ok\":true,\"dryRun\":true,\"message\":\"Build-road validation passed.\",\"roadPrefab\":\"" +
+                    JsonUtil.Escape(prefabName) + "\",\"heightOffset\":" + JsonUtil.Number(heightOffset) +
+                    ",\"reusedStartNode\":" + JsonUtil.Bool(startNode != 0) +
+                    ",\"reusedEndNode\":" + JsonUtil.Bool(endNode != 0) + "}");
             }
 
             SimulationManager simulation = Singleton<SimulationManager>.instance;
-            NetManager net = NetManager.instance;
             Randomizer randomizer = simulation.m_randomizer;
 
-            ushort startNode = FindNearbyNode(start, 2f, info);
-            ushort endNode = FindNearbyNode(end, 2f, info);
             bool createdStartNode = false;
             bool createdEndNode = false;
 
@@ -101,7 +121,8 @@ namespace SkylinesAgentBridge
             string json = "{\"ok\":true,\"dryRun\":false,\"segmentId\":" + segment +
                 ",\"startNodeId\":" + startNode +
                 ",\"endNodeId\":" + endNode +
-                ",\"roadPrefab\":\"" + JsonUtil.Escape(prefabName) + "\"}";
+                ",\"roadPrefab\":\"" + JsonUtil.Escape(prefabName) + "\"" +
+                ",\"heightOffset\":" + JsonUtil.Number(heightOffset) + "}";
 
             Debug.Log("[SkylinesAgentBridge] Built road segment " + segment + " with prefab " + prefabName);
             return CommandResult.FromJson(json);
@@ -135,6 +156,19 @@ namespace SkylinesAgentBridge
             return 0;
         }
 
+        private static bool IsMetroBuildProtected(NetInfo info, string prefabName)
+        {
+            if (info == null || info.m_class == null)
+            {
+                return false;
+            }
+
+            return info.m_class.m_service == ItemClass.Service.PublicTransport &&
+                info.m_class.m_subService == ItemClass.SubService.PublicTransportMetro &&
+                prefabName != null &&
+                prefabName.IndexOf("Metro Line") < 0;
+        }
+
         private static bool CanReuseNode(NetInfo existing, NetInfo requested)
         {
             if (existing == null || requested == null || existing.m_class == null || requested.m_class == null)
@@ -143,6 +177,13 @@ namespace SkylinesAgentBridge
             }
 
             if (existing == requested)
+            {
+                return true;
+            }
+
+            if (existing.m_class.m_service == ItemClass.Service.PublicTransport &&
+                requested.m_class.m_service == ItemClass.Service.PublicTransport &&
+                existing.m_class.m_subService == requested.m_class.m_subService)
             {
                 return true;
             }

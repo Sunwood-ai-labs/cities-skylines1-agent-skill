@@ -158,6 +158,18 @@ namespace SkylinesAgentBridge
                 return RunOnGameThread(request, delegate { return GameState.BuildNetworksJson(limit, service); });
             }
 
+            if (request.Method == "GET" && request.Path == "/state/network-segment-details")
+            {
+                ushort id = (ushort)request.GetQueryInt("id", 0);
+                return RunOnGameThread(request, delegate { return GameState.BuildNetworkSegmentDetailsJson(id); });
+            }
+
+            if (request.Method == "GET" && request.Path == "/state/network-node-details")
+            {
+                ushort id = (ushort)request.GetQueryInt("id", 0);
+                return RunOnGameThread(request, delegate { return GameState.BuildNetworkNodeDetailsJson(id); });
+            }
+
             if (request.Method == "GET" && request.Path == "/state/road-anomalies")
             {
                 int limit = request.GetQueryInt("limit", 200);
@@ -176,7 +188,9 @@ namespace SkylinesAgentBridge
             if (request.Method == "GET" && request.Path == "/state/building-anomalies")
             {
                 int limit = request.GetQueryInt("limit", 200);
-                return RunOnGameThread(request, delegate { return GameState.BuildBuildingAnomaliesJson(limit); });
+                float roadClearance = request.GetQueryFloat("roadClearance", 0f);
+                bool includeOriginal = request.GetQueryString("includeOriginal", "false") == "true";
+                return RunOnGameThread(request, delegate { return GameState.BuildBuildingAnomaliesJson(limit, roadClearance, includeOriginal); });
             }
 
             if (request.Method == "GET" && request.Path == "/state/zone-anomalies")
@@ -197,6 +211,32 @@ namespace SkylinesAgentBridge
             {
                 int limit = request.GetQueryInt("limit", 256);
                 return RunOnGameThread(request, delegate { return TransportCommands.BuildTransportLinesJson(limit); });
+            }
+
+            if (request.Method == "GET" && request.Path == "/state/transport-vehicles")
+            {
+                int limit = request.GetQueryInt("limit", 256);
+                ushort lineId = (ushort)request.GetQueryInt("lineId", 0);
+                return RunOnGameThread(request, delegate { return TransportCommands.BuildTransportVehiclesJson(lineId, limit); });
+            }
+
+            if (request.Method == "GET" && request.Path == "/state/transport-line-anomalies")
+            {
+                int limit = request.GetQueryInt("limit", 256);
+                return RunOnGameThread(request, delegate { return TransportCommands.BuildTransportLineAnomaliesJson(limit); });
+            }
+
+            if (request.Method == "GET" && request.Path == "/state/transport-station-anomalies")
+            {
+                int limit = request.GetQueryInt("limit", 256);
+                float maxStopDistance = request.GetQueryFloat("maxStopDistance", 96f);
+                return RunOnGameThread(request, delegate { return TransportCommands.BuildTransportStationAnomaliesJson(limit, maxStopDistance); });
+            }
+
+            if (request.Method == "GET" && request.Path == "/state/transport-line-paths")
+            {
+                ushort lineId = (ushort)request.GetQueryInt("lineId", 0);
+                return RunOnGameThread(request, delegate { return TransportCommands.BuildTransportLinePathDetailsJson(lineId); });
             }
 
             if (request.Method == "GET" && request.Path == "/state/map-areas")
@@ -321,6 +361,12 @@ namespace SkylinesAgentBridge
                 return RunOnGameThread(request, delegate { return TransportCommands.AssignTransportLineDepot(body); });
             }
 
+            if (request.Method == "POST" && request.Path == "/commands/refresh-transport-network")
+            {
+                string body = request.Body;
+                return RunOnGameThread(request, delegate { return TransportCommands.RefreshTransportNetwork(body); });
+            }
+
             if (request.Method == "POST" && request.Path == "/commands/unlock-map-areas")
             {
                 string body = request.Body;
@@ -373,12 +419,18 @@ namespace SkylinesAgentBridge
                 if (request.Path == "/state/facilities") return "Read facilities";
                 if (request.Path == "/state/growables") return "Read growable buildings";
                 if (request.Path == "/state/networks") return "Read networks";
+                if (request.Path == "/state/network-segment-details") return "Read network segment details";
+                if (request.Path == "/state/network-node-details") return "Read network node details";
                 if (request.Path == "/state/road-anomalies") return "Inspect road anomalies";
                 if (request.Path == "/state/external-connections") return "Inspect external connections";
                 if (request.Path == "/state/building-anomalies") return "Inspect building placement";
                 if (request.Path == "/state/zone-anomalies") return "Inspect zoning anomalies";
                 if (request.Path == "/state/saves") return "List saves";
                 if (request.Path == "/state/transport-lines") return "Read transport lines";
+                if (request.Path == "/state/transport-vehicles") return "Read transport vehicles";
+                if (request.Path == "/state/transport-line-anomalies") return "Inspect transport line anomalies";
+                if (request.Path == "/state/transport-station-anomalies") return "Inspect transport station anomalies";
+                if (request.Path == "/state/transport-line-paths") return "Inspect transport line paths";
                 if (request.Path == "/prefabs/roads") return "List road prefabs";
                 if (request.Path == "/prefabs/networks") return "List network prefabs";
                 if (request.Path == "/prefabs/buildings") return "List building prefabs";
@@ -450,6 +502,11 @@ namespace SkylinesAgentBridge
             if (request.Path == "/commands/assign-transport-line-depot")
             {
                 return "Assign depot to transport line #" + ((int)JsonUtil.GetNumber(body, "id", 0f)).ToString();
+            }
+
+            if (request.Path == "/commands/refresh-transport-network")
+            {
+                return "Refresh transport network " + JsonUtil.GetString(body, "transportType", "Metro");
             }
 
             if (request.Path == "/commands/set-simulation-speed")
