@@ -248,13 +248,24 @@ components.
 
 ## GET /state/building-anomalies
 
-Detects service buildings whose footprint intersects a road segment. This is
-for API-side QA when a building appears to be placed through a road, without
-using screenshots.
+Detects user-placed and growable buildings whose footprint intersects a road
+segment. This is for API-side QA when a building appears to be placed through a
+road, without using screenshots. Pass `roadClearance` to also report buildings
+whose footprint is very close to a road centerline, which helps catch road-edge
+overlaps that are visually obvious but do not cross the exact centerline.
+Original map objects such as rocks and bridge pillars are skipped by default;
+pass `includeOriginal=true` when auditing map objects too.
 
 ```powershell
 Invoke-RestMethod http://127.0.0.1:32123/state/building-anomalies?limit=200
+Invoke-RestMethod "http://127.0.0.1:32123/state/building-anomalies?limit=200&roadClearance=0"
+Invoke-RestMethod "http://127.0.0.1:32123/state/building-anomalies?limit=200&roadClearance=1&includeOriginal=true"
 ```
+
+Detected anomaly types:
+
+- `buildingRoadOverlap`: a road centerline intersects the building footprint.
+- `buildingRoadTooClose`: the road centerline is within `roadClearance` meters of the building footprint.
 
 ## GET /state/zone-anomalies
 
@@ -454,6 +465,37 @@ Lists local `.crp` saves with paths, timestamps, and file sizes.
 
 ```powershell
 Invoke-RestMethod http://127.0.0.1:32123/state/saves
+```
+
+## GET /state/transport-line-anomalies
+
+Detects broken public transport lines at the line level. This includes
+`lineNotConnected` stop nodes, incomplete lines, too few stops, and lines that
+target vehicles but have none spawned. Use this before treating a line as
+operational; vehicle counts alone can be misleading.
+
+```powershell
+Invoke-RestMethod "http://127.0.0.1:32123/state/transport-line-anomalies?limit=200"
+```
+
+## GET /state/transport-station-anomalies
+
+Detects passenger station buildings that have no nearby same-type public
+transport line stop. This catches stations that are built but not actually
+served by a route. `maxStopDistance` defaults to `96` meters.
+
+```powershell
+Invoke-RestMethod "http://127.0.0.1:32123/state/transport-station-anomalies?limit=200&maxStopDistance=96"
+```
+
+## GET /state/transport-vehicles
+
+Returns live vehicles for all transport lines, or for one line with `lineId`.
+Each vehicle includes its line id, path id, position, velocity-derived speed,
+target/source buildings, and wait/block counters.
+
+```powershell
+Invoke-RestMethod "http://127.0.0.1:32123/state/transport-vehicles?lineId=29&limit=50"
 ```
 
 ## POST /commands/set-simulation-speed

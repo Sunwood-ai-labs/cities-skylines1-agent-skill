@@ -90,6 +90,7 @@ export default defineConfig({
               { text: 'APIリファレンス', link: '/ja/api' },
               { text: 'リリースノート v0.3.0', link: '/ja/releases/v0.3.0/' },
               { text: 'リリースノート v0.1.0', link: '/ja/releases/v0.1.0/' },
+              { text: 'v0.3.0 リリース内容', link: '/ja/guide/articles/cs1-agent-skill-beginner' },
               { text: 'v0.3.0 解説記事', link: '/ja/guide/articles/v0-3-0-agent-city-operations' },
               { text: '実験記事', link: '/articles/building-cities-skylines-with-ai-agents-ja' }
             ]
