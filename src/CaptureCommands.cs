@@ -98,6 +98,7 @@ namespace SkylinesAgentBridge
 
             camera.ClearTarget();
             camera.SetOverrideModeOff();
+            camera.DisableFocusEffects();
             camera.m_freeCamera = true;
             camera.m_unlimitedCamera = true;
             camera.m_targetPosition = center;
@@ -125,7 +126,8 @@ namespace SkylinesAgentBridge
         private static Vector3 FindCityCenter()
         {
             NetManager manager = NetManager.instance;
-            Vector3 sum = Vector3.zero;
+            BuildingManager buildings = BuildingManager.instance;
+            Bounds2D bounds = new Bounds2D();
             int count = 0;
 
             for (ushort i = 1; i < manager.m_nodes.m_buffer.Length; i++)
@@ -136,14 +138,25 @@ namespace SkylinesAgentBridge
                     continue;
                 }
 
-                Vector3 position = node.m_position;
-                if (Mathf.Abs(position.x) > 8600f || Mathf.Abs(position.z) > 8600f)
+                if (AddPoint(bounds, node.m_position))
+                {
+                    count++;
+                }
+            }
+
+            for (ushort i = 1; i < buildings.m_buildings.m_buffer.Length; i++)
+            {
+                Building building = buildings.m_buildings.m_buffer[i];
+                if ((building.m_flags & Building.Flags.Created) == Building.Flags.None ||
+                    (building.m_flags & Building.Flags.Deleted) != Building.Flags.None)
                 {
                     continue;
                 }
 
-                sum += position;
-                count++;
+                if (AddPoint(bounds, building.m_position))
+                {
+                    count++;
+                }
             }
 
             if (count == 0)
@@ -151,7 +164,31 @@ namespace SkylinesAgentBridge
                 return Vector3.zero;
             }
 
-            return sum / count;
+            return new Vector3((bounds.MinX + bounds.MaxX) * 0.5f, 0f, (bounds.MinZ + bounds.MaxZ) * 0.5f);
+        }
+
+        private static bool AddPoint(Bounds2D bounds, Vector3 position)
+        {
+            if (Mathf.Abs(position.x) > 8600f || Mathf.Abs(position.z) > 8600f)
+            {
+                return false;
+            }
+
+            if (!bounds.HasValue)
+            {
+                bounds.MinX = position.x;
+                bounds.MaxX = position.x;
+                bounds.MinZ = position.z;
+                bounds.MaxZ = position.z;
+                bounds.HasValue = true;
+                return true;
+            }
+
+            if (position.x < bounds.MinX) bounds.MinX = position.x;
+            if (position.x > bounds.MaxX) bounds.MaxX = position.x;
+            if (position.z < bounds.MinZ) bounds.MinZ = position.z;
+            if (position.z > bounds.MaxZ) bounds.MaxZ = position.z;
+            return true;
         }
 
         private static string GetCaptureDirectory()
@@ -226,10 +263,10 @@ namespace SkylinesAgentBridge
                         Name = "transport",
                         InfoMode = InfoManager.InfoMode.Transport,
                         SubInfoMode = InfoManager.SubInfoMode.NormalTransport,
-                        Zoom = 3200f,
-                        Height = 1200f,
-                        AngleX = 1.25f,
-                        AngleY = 0f
+                        Zoom = 4600f,
+                        Height = 2800f,
+                        AngleX = 0f,
+                        AngleY = 90f
                     };
                 }
 
@@ -240,10 +277,10 @@ namespace SkylinesAgentBridge
                         Name = "underground",
                         InfoMode = InfoManager.InfoMode.Underground,
                         SubInfoMode = InfoManager.SubInfoMode.UndergroundTunnels,
-                        Zoom = 3200f,
-                        Height = 1200f,
-                        AngleX = 1.25f,
-                        AngleY = 0f
+                        Zoom = 4600f,
+                        Height = 2800f,
+                        AngleX = 0f,
+                        AngleY = 90f
                     };
                 }
 
@@ -252,12 +289,21 @@ namespace SkylinesAgentBridge
                     Name = "overview",
                     InfoMode = InfoManager.InfoMode.None,
                     SubInfoMode = InfoManager.SubInfoMode.Default,
-                    Zoom = 3600f,
-                    Height = 1400f,
-                    AngleX = 1.2f,
-                    AngleY = 0.75f
+                    Zoom = 4600f,
+                    Height = 2800f,
+                    AngleX = 0f,
+                    AngleY = 90f
                 };
             }
+        }
+
+        private sealed class Bounds2D
+        {
+            public bool HasValue;
+            public float MinX;
+            public float MaxX;
+            public float MinZ;
+            public float MaxZ;
         }
     }
 }
