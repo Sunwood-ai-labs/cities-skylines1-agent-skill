@@ -92,6 +92,7 @@ namespace SkylinesAgentBridge
             string typeName = JsonUtil.GetString(body, "transportType", "Bus");
             string lineName = JsonUtil.GetString(body, "name", "");
             bool fixedPlatform = JsonUtil.GetBool(body, "fixedPlatform", false);
+            bool closeLoop = JsonUtil.GetBool(body, "closeLoop", true);
             List<string> stopObjects = JsonUtil.GetObjectArray(body, "stops");
 
             TransportInfo.TransportType transportType;
@@ -148,6 +149,17 @@ namespace SkylinesAgentBridge
                 {
                     manager.ReleaseLine(lineId);
                     return CommandResult.Fail("Failed to add stop " + i + " near x=" + JsonUtil.Number(stops[i].x) + ", z=" + JsonUtil.Number(stops[i].z) + ".");
+                }
+            }
+
+            if (closeLoop)
+            {
+                bool closed = manager.m_lines.m_buffer[lineId].AddStop(lineId, stops.Count, stops[0], fixedPlatform);
+                if (!closed)
+                {
+                    manager.ReleaseLine(lineId);
+                    return CommandResult.Fail("Failed to close transport line near first stop x=" +
+                        JsonUtil.Number(stops[0].x) + ", z=" + JsonUtil.Number(stops[0].z) + ".");
                 }
             }
 
