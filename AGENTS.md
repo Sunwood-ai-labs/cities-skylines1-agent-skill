@@ -74,6 +74,19 @@ This repository uses a lightweight Git Flow development model. Agents must follo
 - Keep every commit in a state that is understandable, buildable, and easy to revert.
 - Use extra commits as recovery points before risky edits or broad mechanical changes.
 - Do not mix unrelated code, docs, scripts, and generated assets in one commit when they can be separated safely.
+- Write commit messages in English.
+- Prefix each commit title with an emoji that makes the change type easy to scan.
+- Make the commit message understandable to a third-party reviewer who did not watch the work happen.
+- Use a short title plus a bullet-list body for non-trivial commits so the reason, scope, and validation are easy to read.
+- Mention validation results, skipped checks, or follow-up risks in the commit body when they matter.
+
+   ```text
+   📝 Document frequent agent commits
+
+   - Explain why agents should commit in small recovery points.
+   - Clarify that commits should stay buildable for bisecting.
+   - Validation: scripts/check-doc-links.ps1.
+   ```
 
 ## Review Notes
 
