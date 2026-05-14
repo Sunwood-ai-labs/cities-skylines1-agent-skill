@@ -60,6 +60,7 @@ Invoke-RestMethod "http://127.0.0.1:32123/state/transport-station-anomalies?limi
 Invoke-RestMethod "http://127.0.0.1:32123/state/facilities?limit=500"
 Invoke-RestMethod "http://127.0.0.1:32123/state/growables?limit=500"
 Invoke-RestMethod "http://127.0.0.1:32123/state/networks?limit=1000&service=Road"
+Invoke-RestMethod "http://127.0.0.1:32123/state/captures"
 ```
 
 Use `includeMapObjects=true` on `/state/facilities` only when raw helper objects such as pipe junctions are needed.
@@ -120,6 +121,21 @@ Save and verify:
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\save-city.ps1 -Name AgentAutoSave-clean
 Invoke-RestMethod http://127.0.0.1:32123/state/saves
+```
+
+Capture overview, route-map, and underground reference images:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture-city-view.ps1 -Preset overview
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture-city-view.ps1 -Preset transport -SuperSize 2
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture-city-view.ps1 -Preset underground -Name metro-underground.png
+Invoke-RestMethod http://127.0.0.1:32123/state/captures
+```
+
+If capture or info-view testing leaves the normal HUD hidden, restore the game UI:
+
+```powershell
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:32123/commands/restore-ui
 ```
 
 ## Known Gotchas

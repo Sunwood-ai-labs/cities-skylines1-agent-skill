@@ -467,6 +467,61 @@ Lists local `.crp` saves with paths, timestamps, and file sizes.
 Invoke-RestMethod http://127.0.0.1:32123/state/saves
 ```
 
+## POST /commands/capture-view
+
+Requests a PNG screenshot for quick human review of the loaded city. The
+command can move the camera to an API-friendly overview and switch CS1 info
+views before asking Unity to write the image. Screenshot writing happens after
+the next rendered frame, so the response includes `pending: true` and a `path`
+to poll.
+
+Supported `preset` values:
+
+- `overview`: city-wide camera with the normal view.
+- `transport`, `route-map`: public transport route info view.
+- `underground`, `metro`, `subway`: underground tunnel info view for metro and other below-grade networks.
+
+```powershell
+$body = @{ preset = "overview"; superSize = 1 } | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:32123/commands/capture-view -Body $body -ContentType "application/json"
+
+$body = @{ preset = "transport"; name = "routes.png"; superSize = 2 } | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:32123/commands/capture-view -Body $body -ContentType "application/json"
+
+$body = @{ preset = "underground"; name = "metro-underground.png" } | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:32123/commands/capture-view -Body $body -ContentType "application/json"
+```
+
+Optional camera overrides include `center`, `zoom`, `height`, `angleX`,
+`angleY`, and `setCamera: false` to keep the current camera while still
+switching the info view and capturing.
+
+Helper script:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\capture-city-view.ps1 -Preset overview
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\capture-city-view.ps1 -Preset transport -SuperSize 2
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\capture-city-view.ps1 -Preset underground -Name metro-underground.png
+```
+
+## GET /state/captures
+
+Lists PNG files created by `/commands/capture-view`.
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:32123/state/captures
+```
+
+## POST /commands/restore-ui
+
+Restores the normal CS1 UI after capture, info-view, or camera testing leaves
+the HUD hidden. It clears info views, returns to the default tool, re-enables
+the main UI view and toolbar, and refreshes the UI.
+
+```powershell
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:32123/commands/restore-ui
+```
+
 ## GET /state/transport-line-anomalies
 
 Detects broken public transport lines at the line level. This includes

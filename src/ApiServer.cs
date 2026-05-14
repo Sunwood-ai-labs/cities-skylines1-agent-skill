@@ -249,6 +249,11 @@ namespace SkylinesAgentBridge
                 return RunOnGameThread(request, SettingsCommands.BuildGameSettingsJson);
             }
 
+            if (request.Method == "GET" && request.Path == "/state/captures")
+            {
+                return RunOnGameThread(request, CaptureCommands.ListCaptures);
+            }
+
             if (request.Method == "GET" && request.Path == "/prefabs/roads")
             {
                 return RunOnGameThread(request, GameState.BuildRoadPrefabsJson);
@@ -379,6 +384,17 @@ namespace SkylinesAgentBridge
                 return RunOnGameThread(request, delegate { return SettingsCommands.SetAutoSave(body); });
             }
 
+            if (request.Method == "POST" && request.Path == "/commands/capture-view")
+            {
+                string body = request.Body;
+                return RunOnGameThread(request, delegate { return CaptureCommands.CaptureView(body); });
+            }
+
+            if (request.Method == "POST" && request.Path == "/commands/restore-ui")
+            {
+                return RunOnGameThread(request, UiCommands.RestoreUi);
+            }
+
             if (request.Method == "POST" && request.Path == "/commands/batch")
             {
                 string body = request.Body;
@@ -431,6 +447,7 @@ namespace SkylinesAgentBridge
                 if (request.Path == "/state/transport-line-anomalies") return "Inspect transport line anomalies";
                 if (request.Path == "/state/transport-station-anomalies") return "Inspect transport station anomalies";
                 if (request.Path == "/state/transport-line-paths") return "Inspect transport line paths";
+                if (request.Path == "/state/captures") return "List city captures";
                 if (request.Path == "/prefabs/roads") return "List road prefabs";
                 if (request.Path == "/prefabs/networks") return "List network prefabs";
                 if (request.Path == "/prefabs/buildings") return "List building prefabs";
@@ -516,6 +533,16 @@ namespace SkylinesAgentBridge
                     return "Pause simulation";
                 }
                 return "Set simulation speed " + ((int)JsonUtil.GetNumber(body, "speed", 0f)).ToString();
+            }
+
+            if (request.Path == "/commands/capture-view")
+            {
+                return "Capture " + JsonUtil.GetString(body, "preset", "overview") + " view";
+            }
+
+            if (request.Path == "/commands/restore-ui")
+            {
+                return "Restore UI";
             }
 
             if (request.Path == "/commands/set-tax-rate")

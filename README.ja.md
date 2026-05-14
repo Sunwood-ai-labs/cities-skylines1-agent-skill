@@ -113,6 +113,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-new-map.ps1
 - `GET /state/road-anomalies`
 - `GET /state/building-anomalies`
 - `GET /state/saves`
+- `GET /state/captures`
 - `GET /prefabs/roads`
 - `GET /prefabs/networks`
 - `GET /prefabs/buildings`
@@ -126,6 +127,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-new-map.ps1
 - `POST /commands/move-building`
 - `POST /commands/bulldoze`
 - `POST /commands/save`
+- `POST /commands/capture-view`
+- `POST /commands/restore-ui`
 - `POST /commands/set-simulation-speed`
 - `POST /commands/set-tax-rate`
 - `POST /commands/batch` おまけの一括実行

@@ -116,6 +116,7 @@ Read APIs:
 - `GET /state/building-anomalies`
 - `GET /state/zone-anomalies`
 - `GET /state/saves`
+- `GET /state/captures`
 - `GET /prefabs/roads`
 - `GET /prefabs/networks`
 - `GET /prefabs/buildings`
@@ -129,6 +130,8 @@ Command APIs:
 - `POST /commands/move-building`
 - `POST /commands/bulldoze`
 - `POST /commands/save`
+- `POST /commands/capture-view`
+- `POST /commands/restore-ui`
 - `POST /commands/set-simulation-speed`
 - `POST /commands/set-tax-rate`
 - `POST /commands/batch` optional convenience wrapper
