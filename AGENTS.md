@@ -71,7 +71,7 @@ This repository uses a lightweight Git Flow development model. Agents must follo
 
 - Prefer small, focused commits over large end-of-task commits.
 - Commit after each coherent step, such as docs wording, implementation logic, test coverage, or review feedback.
-- Keep every commit in a state that is understandable and easy to revert.
+- Keep every commit in a state that is understandable, buildable, and easy to revert.
 - Use extra commits as recovery points before risky edits or broad mechanical changes.
 - Do not mix unrelated code, docs, scripts, and generated assets in one commit when they can be separated safely.
 
