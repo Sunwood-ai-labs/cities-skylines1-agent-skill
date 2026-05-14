@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" role="img" aria-labelledby="title desc">
+  <title id="title">cities-skylines1-agent-skill v0.3.0 release header</title>
+  <desc id="desc">A release header for the Cities: Skylines 1 Agent Skill v0.3.0 city operations release.</desc>
+  <rect width="1200" height="420" fill="#10233f"/>
+  <rect x="64" y="64" width="1072" height="292" rx="28" fill="#1c3558"/>
+  <path d="M88 294h1024" stroke="#fca311" stroke-width="12" stroke-linecap="round"/>
+  <path d="M134 294V180h44v114M214 294V128h54v166M306 294V206h42v88" fill="none" stroke="#e5e5e5" stroke-width="14" stroke-linejoin="round"/>
+  <path d="M142 320h192" stroke="#2ec4b6" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="142" cy="320" r="13" fill="#2ec4b6"/>
+  <circle cx="238" cy="320" r="13" fill="#2ec4b6"/>
+  <circle cx="334" cy="320" r="13" fill="#2ec4b6"/>
+  <path d="M112 104h236v42H112z" fill="#2ec4b6" opacity="0.18"/>
+  <path d="M112 156h236v42H112z" fill="#fca311" opacity="0.18"/>
+  <path d="M112 208h236v42H112z" fill="#ffffff" opacity="0.12"/>
+  <text x="428" y="152" fill="#e5e5e5" font-family="Segoe UI, Arial, sans-serif" font-size="46" font-weight="700">cities-skylines1-agent-skill</text>
+  <text x="428" y="222" fill="#fca311" font-family="Segoe UI, Arial, sans-serif" font-size="72" font-weight="800">v0.3.0</text>
+  <text x="428" y="282" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="32" font-weight="600">Telemetry, economy controls, anomaly repair workflows</text>
+</svg>

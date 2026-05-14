@@ -53,8 +53,10 @@ Invoke-RestMethod http://127.0.0.1:32123/state/zones
 Invoke-RestMethod "http://127.0.0.1:32123/state/problems?limit=200"
 Invoke-RestMethod "http://127.0.0.1:32123/state/economy"
 Invoke-RestMethod "http://127.0.0.1:32123/state/road-anomalies?limit=500&nearMissDistance=18&shortSegmentLength=32&includeDeadEnds=false"
-Invoke-RestMethod "http://127.0.0.1:32123/state/building-anomalies?limit=200"
+Invoke-RestMethod "http://127.0.0.1:32123/state/building-anomalies?limit=200&roadClearance=0&includeOriginal=false"
 Invoke-RestMethod "http://127.0.0.1:32123/state/zone-anomalies?limit=200&includeUnzonedHoles=true"
+Invoke-RestMethod "http://127.0.0.1:32123/state/transport-line-anomalies?limit=200"
+Invoke-RestMethod "http://127.0.0.1:32123/state/transport-station-anomalies?limit=200&maxStopDistance=96"
 Invoke-RestMethod "http://127.0.0.1:32123/state/facilities?limit=500"
 Invoke-RestMethod "http://127.0.0.1:32123/state/growables?limit=500"
 Invoke-RestMethod "http://127.0.0.1:32123/state/networks?limit=1000&service=Road"
@@ -127,5 +129,7 @@ Invoke-RestMethod http://127.0.0.1:32123/state/saves
 - Roads that look connected to highways can still have separate nodes. Use `/state/road-anomalies` and rebuild with endpoints close enough to reuse the existing road nodes.
 - Do not treat all dead ends as errors. Use bounded checks or `includeDeadEnds=false` unless the user asks to remove cul-de-sacs/stubs.
 - Use `/state/zone-anomalies` when zone colors look mottled or circular paint left residential/commercial/industrial/office cells mixed in the same block.
+- Use `/state/transport-line-anomalies` before declaring a transit line operational; a nonzero `lineNotConnected` count means the route is cut even if vehicles exist.
+- Use `/state/transport-station-anomalies` to catch passenger stations that exist but have no same-type line stop nearby; fix or remove these before saving.
 - `/commands/set-zone` defaults to `preserveOccupied=true`; check `/state/growables` first and keep that flag enabled unless the user explicitly wants to repaint developed blocks.
 - If screenshots show blue/green/yellow mottling across a whole city block, use `/state/zone-anomalies` and repair with `/commands/repair-zone-clusters` using `preferGrowableZone=true`.

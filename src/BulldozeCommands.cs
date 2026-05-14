@@ -17,6 +17,10 @@ namespace SkylinesAgentBridge
             if (entityType == "building")
             {
                 BuildingManager manager = BuildingManager.instance;
+                if (id >= manager.m_buildings.m_buffer.Length)
+                {
+                    return CommandResult.Fail("Building id is out of range: " + id);
+                }
                 if ((manager.m_buildings.m_buffer[id].m_flags & Building.Flags.Created) == Building.Flags.None)
                 {
                     return CommandResult.Fail("Building was not found: " + id);
@@ -24,7 +28,14 @@ namespace SkylinesAgentBridge
 
                 if (!dryRun)
                 {
-                    GameThreadHelpers.ReleaseBuilding(manager, id);
+                    try
+                    {
+                        GameThreadHelpers.ReleaseBuilding(manager, id);
+                    }
+                    catch (System.IndexOutOfRangeException ex)
+                    {
+                        return CommandResult.Fail("Failed to release building " + id + ": " + ex.Message);
+                    }
                 }
 
                 return CommandResult.FromJson("{\"ok\":true,\"dryRun\":" + JsonUtil.Bool(dryRun) + ",\"entityType\":\"building\",\"id\":" + id + "}");
@@ -33,6 +44,10 @@ namespace SkylinesAgentBridge
             if (entityType == "netSegment")
             {
                 NetManager manager = NetManager.instance;
+                if (id >= manager.m_segments.m_buffer.Length)
+                {
+                    return CommandResult.Fail("Net segment id is out of range: " + id);
+                }
                 if ((manager.m_segments.m_buffer[id].m_flags & NetSegment.Flags.Created) == NetSegment.Flags.None)
                 {
                     return CommandResult.Fail("Net segment was not found: " + id);
@@ -40,7 +55,14 @@ namespace SkylinesAgentBridge
 
                 if (!dryRun)
                 {
-                    GameThreadHelpers.ReleaseSegment(manager, id, keepNodes);
+                    try
+                    {
+                        GameThreadHelpers.ReleaseSegment(manager, id, keepNodes);
+                    }
+                    catch (System.IndexOutOfRangeException ex)
+                    {
+                        return CommandResult.Fail("Failed to release net segment " + id + ": " + ex.Message);
+                    }
                 }
 
                 return CommandResult.FromJson("{\"ok\":true,\"dryRun\":" + JsonUtil.Bool(dryRun) + ",\"entityType\":\"netSegment\",\"id\":" + id + ",\"keepNodes\":" + JsonUtil.Bool(keepNodes) + "}");
@@ -49,6 +71,10 @@ namespace SkylinesAgentBridge
             if (entityType == "netNode")
             {
                 NetManager manager = NetManager.instance;
+                if (id >= manager.m_nodes.m_buffer.Length)
+                {
+                    return CommandResult.Fail("Net node id is out of range: " + id);
+                }
                 if ((manager.m_nodes.m_buffer[id].m_flags & NetNode.Flags.Created) == NetNode.Flags.None)
                 {
                     return CommandResult.Fail("Net node was not found: " + id);
@@ -56,7 +82,14 @@ namespace SkylinesAgentBridge
 
                 if (!dryRun)
                 {
-                    manager.ReleaseNode(id);
+                    try
+                    {
+                        manager.ReleaseNode(id);
+                    }
+                    catch (System.IndexOutOfRangeException ex)
+                    {
+                        return CommandResult.Fail("Failed to release net node " + id + ": " + ex.Message);
+                    }
                 }
 
                 return CommandResult.FromJson("{\"ok\":true,\"dryRun\":" + JsonUtil.Bool(dryRun) + ",\"entityType\":\"netNode\",\"id\":" + id + "}");

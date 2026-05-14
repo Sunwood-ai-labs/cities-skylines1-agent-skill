@@ -21,6 +21,13 @@ namespace SkylinesAgentBridge
                 name = "AgentAutoSave";
             }
 
+            if (string.Equals(name, "AutoSave", StringComparison.OrdinalIgnoreCase))
+            {
+                return CommandResult.Fail("Refusing to save as AutoSave.crp. Use a unique named save to avoid CS1 autosave file sharing violations.");
+            }
+
+            EnsureAutoSaveDisabled();
+
             if (SavePanel.isSaving)
             {
                 return CommandResult.Fail("A save is already in progress.");
@@ -106,6 +113,15 @@ namespace SkylinesAgentBridge
         {
             return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "Colossal Order\\Cities_Skylines\\Saves");
+        }
+
+        private static void EnsureAutoSaveDisabled()
+        {
+            SavedBool autoSave = new SavedBool(Settings.autoSave, Settings.gameSettingsFile, DefaultSettings.autoSave, true);
+            if (autoSave.value)
+            {
+                autoSave.value = false;
+            }
         }
 
         private static string SanitizeName(string name)

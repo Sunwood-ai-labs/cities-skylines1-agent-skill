@@ -22,7 +22,7 @@ namespace SkylinesAgentBridge
                     "ReleaseBuildingImplementation",
                     BindingFlags.Instance | BindingFlags.NonPublic,
                     null,
-                    new Type[] { typeof(ushort) },
+                    new Type[] { typeof(ushort), typeof(Building).MakeByRefType() },
                     null);
 
                 if (method == null)
@@ -30,7 +30,8 @@ namespace SkylinesAgentBridge
                     throw;
                 }
 
-                method.Invoke(manager, new object[] { id });
+                object[] args = new object[] { id, manager.m_buildings.m_buffer[id] };
+                InvokeSameThreadRelease(method, manager, args);
             }
         }
 
@@ -56,7 +57,7 @@ namespace SkylinesAgentBridge
 
                 if (method != null)
                 {
-                    method.Invoke(manager, new object[] { id, keepNodes });
+                    InvokeSameThreadRelease(method, manager, new object[] { id, keepNodes });
                     return;
                 }
 
@@ -69,7 +70,7 @@ namespace SkylinesAgentBridge
                     "ReleaseSegmentImplementation",
                     BindingFlags.Instance | BindingFlags.NonPublic,
                     null,
-                    new Type[] { typeof(ushort) },
+                    new Type[] { typeof(ushort), typeof(NetSegment).MakeByRefType(), typeof(bool) },
                     null);
 
                 if (method == null)
@@ -77,7 +78,24 @@ namespace SkylinesAgentBridge
                     throw;
                 }
 
-                method.Invoke(manager, new object[] { id });
+                object[] args = new object[] { id, manager.m_segments.m_buffer[id], keepNodes };
+                InvokeSameThreadRelease(method, manager, args);
+            }
+        }
+
+        private static void InvokeSameThreadRelease(MethodInfo method, object target, object[] args)
+        {
+            try
+            {
+                method.Invoke(target, args);
+            }
+            catch (TargetInvocationException ex)
+            {
+                InvalidOperationException inner = ex.InnerException as InvalidOperationException;
+                if (inner == null || !IsSameThreadException(inner))
+                {
+                    throw;
+                }
             }
         }
 

@@ -104,6 +104,23 @@ function Wait-AgentBridge([int]$port, [int]$timeoutSeconds) {
     throw "Timed out waiting for Skylines Agent Bridge on port $port"
 }
 
+function Disable-InGameAutoSave([int]$port) {
+    try {
+        $settings = Invoke-RestMethod "http://127.0.0.1:$port/state/game-settings"
+        if ($settings.autoSave -eq $true) {
+            Write-Step "Disabling in-game autosave to avoid AutoSave.crp sharing violations"
+            $body = @{ enabled = $false } | ConvertTo-Json
+            Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:$port/commands/set-autosave" -Body $body -ContentType "application/json" | Out-Null
+        }
+        else {
+            Write-Step "In-game autosave is already disabled"
+        }
+    }
+    catch {
+        Write-Step "Could not verify autosave setting through the bridge: $($_.Exception.Message)"
+    }
+}
+
 Ensure-Win32Input
 
 if (-not $SkipBuild) {
@@ -152,6 +169,7 @@ if (-not $cities) {
 
 Write-Step "Waiting for Agent Bridge API"
 $health = Wait-AgentBridge $ApiPort $GameLoadTimeoutSeconds
+Disable-InGameAutoSave $ApiPort
 
 Write-Step "Ready"
 $health | ConvertTo-Json -Depth 8
