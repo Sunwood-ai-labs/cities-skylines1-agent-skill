@@ -42,7 +42,7 @@ This repository uses a lightweight Git Flow development model. Agents must follo
    ```
 
 3. Make the requested changes on the feature branch or in the dedicated worktree.
-4. Keep commits focused and rollback-friendly.
+4. Commit early and often so the branch stays easy to review, bisect, and roll back.
 5. Run the relevant local validation before review.
 6. Push the branch and open a pull request targeting `develop`.
 
@@ -66,6 +66,14 @@ This repository uses a lightweight Git Flow development model. Agents must follo
    git worktree remove ..\<repo-name>-<short-topic>
    git branch -d codex/feature/<short-topic>
    ```
+
+## Commit Discipline
+
+- Prefer small, focused commits over large end-of-task commits.
+- Commit after each coherent step, such as docs wording, implementation logic, test coverage, or review feedback.
+- Keep every commit in a state that is understandable and easy to revert.
+- Use extra commits as recovery points before risky edits or broad mechanical changes.
+- Do not mix unrelated code, docs, scripts, and generated assets in one commit when they can be separated safely.
 
 ## Review Notes
 
