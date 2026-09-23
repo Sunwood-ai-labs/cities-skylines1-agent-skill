@@ -13,6 +13,7 @@ foreach ($line in Get-Content -LiteralPath $EnvironmentFile) {
 }
 if (-not $env:CITY_PUSH_TOKEN) { throw 'CITY_PUSH_TOKEN missing' }
 $env:CITY_PUSH_URL = 'https://city.whodothis.uk/api/push'
-$env:CITY_PUSH_INTERVAL = '60'
+$env:CITY_PUSH_INTERVAL = '3'
+$env:CITY_DASHBOARD_DETAIL_INTERVAL = '30000'
 $node = (Get-Command node.exe -ErrorAction Stop).Source
 & $node (Join-Path $PSScriptRoot 'server.js') --push

@@ -109,6 +109,12 @@ namespace SkylinesAgentBridge
                 return RunOnGameThread(request, GameState.BuildSummaryJson);
             }
 
+            if (request.Method == "GET" && request.Path == "/state/dashboard")
+            {
+                bool includeDetails = request.GetQueryString("includeDetails", "false") == "true";
+                return RunOnGameThread(request, delegate { return DashboardCommands.BuildJson(includeDetails); });
+            }
+
             if (request.Method == "GET" && request.Path == "/state/problems")
             {
                 int limit = request.GetQueryInt("limit", 200);
@@ -396,11 +402,14 @@ namespace SkylinesAgentBridge
             }
 
             CommandResult result = bridge.Queue.RunSync(action, 10000);
-            bridge.Queue.RunSync(delegate
+            if (request.Path != "/state/dashboard")
             {
-                AgentBridgeNotifier.Notify((result.Ok ? "API OK: " : "API FAIL: ") + DescribeRequest(request));
-                return CommandResult.FromJson("{\"ok\":true}");
-            }, 10000);
+                bridge.Queue.RunSync(delegate
+                {
+                    AgentBridgeNotifier.Notify((result.Ok ? "API OK: " : "API FAIL: ") + DescribeRequest(request));
+                    return CommandResult.FromJson("{\"ok\":true}");
+                }, 10000);
+            }
             return HttpResponse.Json(result.Ok ? 200 : 500, result.Json);
         }
 
