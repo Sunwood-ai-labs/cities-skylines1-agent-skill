@@ -14,12 +14,64 @@ const interval = Math.max(15, Number(process.env.CITY_PUSH_INTERVAL || 60)) * 10
 const port = Number(process.env.CITY_DASHBOARD_PORT || 8766);
 const dataPath = process.env.CITY_DASHBOARD_DATA || path.join(__dirname, 'history.json');
 const page = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
-let history = [];
+const RETENTION_MS = 4 * 60 * 60 * 1000;
+const MAX_SAMPLES = 240;
+const MAX_FILE_BYTES = 256 * 1024;
+let latest = null;
+let samples = [];
 if (relay) {
-  try { history = JSON.parse(fs.readFileSync(dataPath, 'utf8')); if (!Array.isArray(history)) history = []; }
-  catch (_) { history = []; }
+  try {
+    const saved = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
+    // Migrate the old array-of-full-snapshots format on first start.
+    if (Array.isArray(saved)) {
+      latest = saved.at(-1) || null;
+      samples = saved.map(toSample).filter(Boolean);
+    } else {
+      latest = saved.latest || null;
+      samples = Array.isArray(saved.samples) ? saved.samples : [];
+    }
+  } catch (_) { latest = null; samples = []; }
 }
-history = history.slice(-1440);
+
+function toSample(item) {
+  if (!item || !Number.isFinite(Date.parse(item.at)) || !Number.isFinite(item.summary?.citizens?.count)) return null;
+  return { at: item.at, gameTime: item.summary.gameTime, population: item.summary.citizens.count, problems: item.problems?.total || 0 };
+}
+
+function prune(now = Date.now()) {
+  const cutoff = now - RETENTION_MS;
+  samples = samples.filter(x => Number.isFinite(Date.parse(x.at)) && Date.parse(x.at) >= cutoff && Date.parse(x.at) <= now + 60000).slice(-MAX_SAMPLES);
+  if (latest && (!Number.isFinite(Date.parse(latest.at)) || Date.parse(latest.at) < cutoff)) latest = null;
+}
+
+function persist(nextLatest = latest, nextSamples = samples) {
+  const temporary = dataPath + '.tmp';
+  let output = Buffer.from(JSON.stringify({ version: 2, latest: nextLatest, samples: nextSamples }));
+  // Defensive cap if a future bridge response grows unexpectedly.
+  while (output.length > MAX_FILE_BYTES && nextSamples.length) {
+    nextSamples = nextSamples.slice(1);
+    output = Buffer.from(JSON.stringify({ version: 2, latest: nextLatest, samples: nextSamples }));
+  }
+  if (output.length > MAX_FILE_BYTES) throw new Error('latest snapshot exceeds dashboard file limit');
+  fs.mkdirSync(path.dirname(dataPath), { recursive: true });
+  fs.writeFileSync(temporary, output);
+  fs.renameSync(temporary, dataPath);
+  latest = nextLatest;
+  samples = nextSamples;
+}
+
+if (relay) {
+  prune();
+  persist();
+  setInterval(() => {
+    const before = samples.length;
+    const hadLatest = !!latest;
+    prune();
+    if (before !== samples.length || hadLatest !== !!latest) {
+      try { persist(); } catch (error) { process.stderr.write(`prune failed: ${error.message}\n`); }
+    }
+  }, 60000).unref();
+}
 
 function requestJson(url, options = {}) {
   return new Promise((resolve, reject) => {
@@ -92,19 +144,17 @@ else {
       req.on('end', () => {
         try {
           const item = JSON.parse(raw);
-          if (item.version !== 1 || !item.summary || !Number.isFinite(item.summary.citizens?.count) || !item.at) throw new Error('invalid snapshot');
-          const nextHistory = history.concat(item).slice(-1440);
-          fs.mkdirSync(path.dirname(dataPath), { recursive: true });
-          const temporary = dataPath + '.tmp';
-          fs.writeFileSync(temporary, JSON.stringify(nextHistory));
-          fs.renameSync(temporary, dataPath);
-          history = nextHistory;
+          const sample = toSample(item);
+          const age = Date.now() - Date.parse(item.at);
+          if (item.version !== 1 || !sample || age < -60000 || age > RETENTION_MS) throw new Error('invalid or expired snapshot');
+          prune();
+          persist(item, samples.concat(sample).slice(-MAX_SAMPLES));
           send(res, 204, '', 'text/plain');
         } catch (error) { send(res, 400, error.message, 'text/plain'); }
       });
       return;
     }
-    if (req.url === '/api/snapshot' && req.method === 'GET') return send(res, 200, JSON.stringify({ ok: history.length > 0, latest: history.at(-1) || null, history: history.map(x => ({ at: x.at, gameTime: x.summary.gameTime, population: x.summary.citizens.count, problems: x.problems.total })) }), 'application/json; charset=utf-8');
+    if (req.url === '/api/snapshot' && req.method === 'GET') return send(res, 200, JSON.stringify({ ok: !!latest, latest, history: samples }), 'application/json; charset=utf-8');
     if ((req.url === '/' || req.url === '/index.html') && req.method === 'GET') return send(res, 200, page, 'text/html; charset=utf-8');
     send(res, 404, 'not found', 'text/plain');
   }).listen(port, '127.0.0.1', () => process.stdout.write(`dashboard relay listening on 127.0.0.1:${port}\n`));
