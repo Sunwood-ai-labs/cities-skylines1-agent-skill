@@ -10,15 +10,18 @@ const path = require('node:path');
 const relay = process.argv.includes('--relay');
 const token = process.env.CITY_PUSH_TOKEN;
 const pushUrl = process.env.CITY_PUSH_URL || 'https://city.whodothis.uk/api/push';
-const interval = Math.max(15, Number(process.env.CITY_PUSH_INTERVAL || 60)) * 1000;
+const interval = Math.max(1, Number(process.env.CITY_PUSH_INTERVAL || 3)) * 1000;
+const detailInterval = Math.max(10000, Number(process.env.CITY_DASHBOARD_DETAIL_INTERVAL || 30000));
 const port = Number(process.env.CITY_DASHBOARD_PORT || 8766);
 const dataPath = process.env.CITY_DASHBOARD_DATA || path.join(__dirname, 'history.json');
 const page = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
-const RETENTION_MS = 4 * 60 * 60 * 1000;
-const MAX_SAMPLES = 240;
-const MAX_FILE_BYTES = 256 * 1024;
+const RETENTION_MS = 60 * 60 * 1000;
+const MAX_SAMPLES = 1200;
+const MAX_FILE_BYTES = 512 * 1024;
 let latest = null;
 let samples = [];
+let detailCache = null;
+let detailsAt = 0;
 if (relay) {
   try {
     const saved = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
@@ -35,8 +38,23 @@ if (relay) {
 
 function toSample(item) {
   if (!item || !Number.isFinite(Date.parse(item.at)) || !Number.isFinite(item.summary?.citizens?.count)) return null;
-  return { at: item.at, gameTime: item.summary.gameTime, population: item.summary.citizens.count, problems: item.problems?.total || 0 };
+  const finance = item.economy || {};
+  const demand = item.summary.demand || {};
+  const zoneCount = name => (item.zones?.zones || []).find(x => x.zone === name)?.cells;
+  return {
+    at: item.at, gameTime: item.summary.gameTime, population: item.summary.citizens.count,
+    problems: item.problems?.total || 0,
+    balance: finiteOrNull(finance.balance), balanceDelta: finiteOrNull(finance.balanceDelta),
+    income: finiteOrNull(finance.income), expenses: finiteOrNull(finance.expenses), net: finiteOrNull(finance.net),
+    residentialDemand: finiteOrNull(demand.residential), commercialDemand: finiteOrNull(demand.commercial),
+    workplaceDemand: finiteOrNull(demand.workplace),
+    residentialCells: finiteOrNull(zoneCount('ResidentialLow')),
+    commercialCells: finiteOrNull(zoneCount('CommercialLow')),
+    industrialCells: finiteOrNull(zoneCount('Industrial'))
+  };
 }
+
+function finiteOrNull(value) { return Number.isFinite(value) ? value : null; }
 
 function prune(now = Date.now()) {
   const cutoff = now - RETENTION_MS;
@@ -99,19 +117,19 @@ function requestJson(url, options = {}) {
 
 async function collect() {
   const base = 'http://127.0.0.1:32123';
-  const summary = await requestJson(base + '/state/summary');
-  if (!summary.ok) throw new Error('game summary unavailable');
-  // Sequential calls avoid piling up work on the game-thread queue.
-  const problems = await requestJson(base + '/state/problems?limit=20');
-  const zones = await requestJson(base + '/state/zones');
-  const facilities = await requestJson(base + '/state/facilities?limit=0');
-  const economy = await requestJson(base + '/state/economy');
+  const includeDetails = !detailCache || Date.now() - detailsAt >= detailInterval;
+  const state = await requestJson(base + '/state/dashboard?includeDetails=' + includeDetails);
+  if (!state.ok || !state.summary || !state.economy?.finance) throw new Error('game dashboard state unavailable');
+  if (state.detailsIncluded) {
+    detailCache = { problems: state.problems, zones: state.zones, facilities: state.facilities };
+    detailsAt = Date.now();
+  }
   return {
-    version: 1, at: new Date().toISOString(), summary,
-    problems: { total: problems.total, countsByProblem: problems.countsByProblem, items: problems.problems },
-    zones: { zonedCells: zones.zonedCells, zones: zones.zones },
-    facilities: { total: facilities.total, countsByService: facilities.countsByService },
-    taxes: economy.aggregateTaxRates
+    version: 2, at: new Date().toISOString(), summary: state.summary,
+    economy: state.economy.finance, taxes: state.economy.aggregateTaxRates,
+    problems: { total: detailCache.problems.total, countsByProblem: detailCache.problems.countsByProblem },
+    zones: { zonedCells: detailCache.zones.zonedCells, zones: detailCache.zones.zones },
+    facilities: { total: detailCache.facilities.total, countsByService: detailCache.facilities.countsByService }
   };
 }
 
@@ -146,7 +164,7 @@ else {
           const item = JSON.parse(raw);
           const sample = toSample(item);
           const age = Date.now() - Date.parse(item.at);
-          if (item.version !== 1 || !sample || age < -60000 || age > RETENTION_MS) throw new Error('invalid or expired snapshot');
+          if (item.version !== 2 || !sample || age < -60000 || age > RETENTION_MS) throw new Error('invalid or expired snapshot');
           prune();
           persist(item, samples.concat(sample).slice(-MAX_SAMPLES));
           send(res, 204, '', 'text/plain');

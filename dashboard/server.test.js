@@ -10,7 +10,7 @@ test('migrates old history, drops expired data, and stores compact bounded sampl
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'city-dashboard-test-'));
   const file = path.join(directory, 'history.json');
   const now = Date.now();
-  const snapshot = at => ({ version: 1, at: new Date(at).toISOString(), summary: { gameTime: '2027-01-01', citizens: { count: 2330 } }, problems: { total: 0 }, zones: { zones: [] }, facilities: { total: 1 }, taxes: [] });
+  const snapshot = at => ({ version: 2, at: new Date(at).toISOString(), summary: { gameTime: '2027-01-01', citizens: { count: 2330 }, demand: { residential: 10, commercial: 5, workplace: 0 } }, economy: { balance: 100000, balanceDelta: 100, income: 4000, expenses: 2000, net: 2000 }, problems: { total: 0 }, zones: { zones: [] }, facilities: { total: 1 }, taxes: [] });
   fs.writeFileSync(file, JSON.stringify([snapshot(now - 5 * 3600000), snapshot(now - 60000)]));
   const port = 40000 + Math.floor(Math.random() * 20000);
   const child = spawn(process.execPath, [path.join(__dirname, 'server.js'), '--relay'], { env: { ...process.env, CITY_PUSH_TOKEN: 'test-secret', CITY_DASHBOARD_PORT: String(port), CITY_DASHBOARD_DATA: file }, stdio: 'ignore' });
@@ -29,8 +29,9 @@ test('migrates old history, drops expired data, and stores compact bounded sampl
     data = JSON.parse(fs.readFileSync(file, 'utf8'));
     assert.equal(data.version, 2);
     assert.equal(data.samples.length, 2);
+    assert.equal(data.samples[0].income, 4000);
     assert.ok(!data.samples[0].summary, 'history sample must not duplicate full snapshot');
-    assert.ok(fs.statSync(file).size < 256 * 1024);
+    assert.ok(fs.statSync(file).size < 512 * 1024);
   } finally {
     child.kill();
     fs.rmSync(directory, { recursive: true, force: true });

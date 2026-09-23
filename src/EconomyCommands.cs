@@ -53,6 +53,13 @@ namespace SkylinesAgentBridge
         public static CommandResult BuildEconomyJson()
         {
             EconomyManager manager = Singleton<EconomyManager>.instance;
+            long incomeRaw = 0L;
+            long expensesRaw = 0L;
+            manager.GetIncomeAndExpenses(ItemClass.Service.None, ItemClass.SubService.None, ItemClass.Level.None, out incomeRaw, out expensesRaw);
+            long balance = manager.InternalCashAmount / 100L;
+            long balanceDelta = manager.LastCashDelta / 100L;
+            long income = incomeRaw / 100L;
+            long expenses = expensesRaw / 100L;
             int[] rawTaxRates = GetRawTaxRates(manager);
             StringBuilder rates = new StringBuilder();
             StringBuilder aggregateRates = new StringBuilder();
@@ -99,7 +106,13 @@ namespace SkylinesAgentBridge
                 }
             }
 
-            return CommandResult.FromJson("{\"ok\":true,\"aggregateTaxRates\":[" + aggregateRates.ToString() + "],\"taxRates\":[" + rates.ToString() + "]}");
+            return CommandResult.FromJson("{\"ok\":true,\"finance\":{\"balance\":" + balance +
+                ",\"balanceDelta\":" + balanceDelta +
+                ",\"income\":" + income +
+                ",\"expenses\":" + expenses +
+                ",\"net\":" + (income - expenses) +
+                ",\"period\":\"budgetWindow\"}" +
+                ",\"aggregateTaxRates\":[" + aggregateRates.ToString() + "],\"taxRates\":[" + rates.ToString() + "]}");
         }
 
         public static CommandResult SetTaxRate(string body)

@@ -518,3 +518,11 @@ Supported command types:
 - `set-zone`
 
 If an item does not include `dryRun`, it inherits the batch-level `dryRun` value. Batches are limited to 32 commands.
+
+## GET /state/dashboard
+
+Returns one quiet consolidated snapshot for external dashboards. It includes
+`summary` and `economy` and does not create an in-game API notification. Add
+`?includeDetails=true` to include `problems`, `zones`, and service facility
+counts. Dashboard clients should request details less often than the core
+snapshot to limit simulation-thread work.
