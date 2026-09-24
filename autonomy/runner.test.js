@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { evaluateMajor, nearestRoadDistance, validateAction } = require('./runner');
+const { deriveZoningCandidates, evaluateMajor, nearestRoadDistance, validateAction } = require('./runner');
 
 function sample() {
   return {
@@ -27,6 +27,16 @@ test('escalates widespread service failures and dangerously low funds', () => {
 
 test('measures road distance to segment, not only endpoints', () => {
   assert.equal(nearestRoadDistance({ x: 50, z: 10 }, sample().roadSegments), 10);
+});
+
+test('derives sparse frontage points only beside roads near existing development', () => {
+  const city = sample();
+  const points = deriveZoningCandidates(city);
+  assert.ok(points.length > 0);
+  assert.ok(points.length <= 16);
+  assert.ok(points.every(point => nearestRoadDistance(point, city.roadSegments) <= 30));
+  city.growables = [];
+  assert.deepEqual(deriveZoningCandidates(city), []);
 });
 
 test('only approves small, demanded, connected zoning actions', () => {

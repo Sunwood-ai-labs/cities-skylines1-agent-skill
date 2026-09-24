@@ -176,6 +176,31 @@ function nearestRoadDistance(point, roads) {
   return nearest;
 }
 
+function deriveZoningCandidates(s) {
+  const candidates = [];
+  for (const segment of s.roadSegments || []) {
+    if (candidates.length >= 16) break;
+    const a = segment.start, b = segment.end;
+    if (!a || !b) continue;
+    const dx = b.x - a.x, dz = b.z - a.z;
+    const length = Math.hypot(dx, dz);
+    if (length < 35) continue;
+    const mid = { x: (a.x + b.x) / 2, z: (a.z + b.z) / 2 };
+    if (!(s.growables || []).some(g => g.position && Math.hypot(g.position.x - mid.x, g.position.z - mid.z) <= 160)) continue;
+    // Place small sample points beside road frontage, away from building centers.
+    const perp = { x: -dz / length, z: dx / length };
+    for (const side of [-1, 1]) {
+      const point = { x: Math.round(mid.x + perp.x * 24), z: Math.round(mid.z + perp.z * 24) };
+      if (nearestRoadDistance(point, [segment]) > 30) continue;
+      if ((s.growables || []).some(g => g.position && Math.hypot(g.position.x - point.x, g.position.z - point.z) < 18)) continue;
+      if (candidates.some(other => Math.hypot(other.x - point.x, other.z - point.z) < 64)) continue;
+      candidates.push(point);
+      if (candidates.length >= 16) break;
+    }
+  }
+  return candidates;
+}
+
 function validateAction(action, s, daily) {
   if (!action || typeof action !== 'object') return '动作格式无效。';
   if (action.type === 'setSimulationSpeed') {
@@ -219,7 +244,8 @@ function makePrompt(s) {
     growableCountsByService: byService,
     growablesWithProblems: (s.growables || []).filter(x => x.problems || x.abandoned).slice(0, 20),
     facilities: s.facilities,
-    roadAccessHint: 'The local validator requires proposed zoning to be within 60 m of a road and within 160 m of existing development.'
+    safeZoningCandidates: deriveZoningCandidates(s),
+    roadAccessHint: 'If zoning is worthwhile, use one of safeZoningCandidates exactly. The local validator also enforces demand, area caps, occupied-cell preservation, cooldown, and action budget.'
   };
   return `You supervise a live Cities: Skylines 1 city. Inspect only this compact JSON snapshot and return one strict JSON object matching the provided output schema. Do not call tools, do not execute commands, and do not invent game facts.\n\nYour job: keep the city stable and grow it cautiously. Prefer no action when evidence is weak. You may propose at most ONE action per cycle.\n\nAllowed proposals only: (1) setZone with one of ResidentialLow, CommercialLow, Industrial, Office and a small radius; zone only where demand is high and existing development/road access support it; (2) setTaxRate only to lower an existing too-high tax to 8 or 9; (3) setSimulationSpeed speed 3. Never propose bulldozing, moving buildings, changing roads, placing service buildings, deleting entities, pausing the game, or changing utilities; those require human review. Do not treat LandfillFull by itself as an emergency when there are no building Garbage problems and an active Combustion Plant exists. Never propose more residential zoning merely because demand is high if the current city has unresolved critical-service issues or finances are distressed. If a substantial service-capacity expansion, demolition, new road layout, or financial commitment is needed, set needsHuman=true and explain why; the controller will decide whether the issue warrants pausing. Every action object must include exactly all schema fields: type, zone, center, radius, service, rate, speed. Set unused values to null (and center=null when not zoning).\n\nCurrent snapshot:\n${JSON.stringify(compact)}`;
 }
@@ -352,4 +378,4 @@ if (require.main === module) {
   main().catch(error => { log('fatal', { error: error.stack || error.message }); status('fatal', { error: error.message }); process.exitCode = 1; });
 }
 
-module.exports = { evaluateMajor, nearestRoadDistance, readConfig, validateAction };
+module.exports = { deriveZoningCandidates, evaluateMajor, nearestRoadDistance, readConfig, validateAction };
