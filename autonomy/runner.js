@@ -34,7 +34,6 @@ function readConfig() {
     modelMinIntervalMs: n('CITY_AUTONOMY_MODEL_INTERVAL_MINUTES', 60, 5, 1440) * 60 * 1000,
     maxModelCallsPerDay: n('CITY_AUTONOMY_MAX_MODEL_CALLS_PER_DAY', 24, 1, 200),
     maxMutationsPerDay: n('CITY_AUTONOMY_MAX_MUTATIONS_PER_DAY', 6, 1, 50),
-    minMinutesBetweenMutations: n('CITY_AUTONOMY_MUTATION_COOLDOWN_MINUTES', 120, 15, 1440),
     minBalance: n('CITY_AUTONOMY_MIN_BALANCE', 30000, 0, 10000000),
     criticalServiceThreshold: n('CITY_AUTONOMY_CRITICAL_PROBLEMS', 5, 1, 100),
     callTimeoutMs: n('CITY_AUTONOMY_MODEL_TIMEOUT_SECONDS', 180, 30, 600) * 1000
@@ -46,7 +45,6 @@ let stopping = false;
 let working = false;
 let prevPopulation = null;
 let lastModelAt = 0;
-let lastMutationAt = 0;
 let lastHumanSignature = '';
 let counters = loadCounters();
 
@@ -55,7 +53,6 @@ function loadCounters() {
   try {
     const saved = JSON.parse(fs.readFileSync(COUNTERS_PATH, 'utf8'));
     if (saved.day === today) {
-      lastMutationAt = Number(saved.lastMutationAt || 0);
       return { day: today, modelCalls: Number(saved.modelCalls || 0), mutations: Number(saved.mutations || 0) };
     }
   } catch (_) { /* first run */ }
@@ -64,7 +61,7 @@ function loadCounters() {
 function persistCounters() {
   ensureRuntime();
   try {
-    fs.writeFileSync(COUNTERS_PATH + '.tmp', JSON.stringify({ ...counters, lastMutationAt }, null, 2));
+    fs.writeFileSync(COUNTERS_PATH + '.tmp', JSON.stringify(counters, null, 2));
     fs.renameSync(COUNTERS_PATH + '.tmp', COUNTERS_PATH);
   } catch (error) { log('counter-write-failed', { error: error.message }); }
 }
@@ -218,14 +215,13 @@ function setZonePreflightHasChanges(result) {
   return result && Number.isFinite(Number(result.eligibleCells)) && Number(result.eligibleCells) > 0;
 }
 
-function validateAction(action, s, daily, mutationTimestamp = lastMutationAt) {
+function validateAction(action, s, daily) {
   if (!action || typeof action !== 'object') return '动作格式无效。';
   if (action.type === 'setSimulationSpeed') {
     return action.speed === 3 ? '' : '只允许维持 3 倍模拟速度。';
   }
   if (['setZone', 'setTaxRate'].includes(action.type)) {
     if (daily.mutations >= config.maxMutationsPerDay) return '已达到每日自动变更上限。';
-    if (Date.now() - mutationTimestamp < config.minMinutesBetweenMutations * 60 * 1000) return '尚未达到两次自动变更之间的冷却时间。';
   }
   if (action.type === 'setTaxRate') {
     if (!['Residential', 'Commercial', 'Industrial', 'Office'].includes(action.service)) return '税种不在白名单中。';
@@ -273,7 +269,7 @@ function makePrompt(s) {
     safeZoningCandidates: deriveResidentialHoleCandidates(s).map(point => ({ ...point, ...describeZoningCandidate(point, s) })),
     roadAccessHint: 'For housing, choose a listed safeZoningCandidates entry exactly. These points come from real residential zone blocks with unzoned cells; the local dry-run enforces cell-level occupancy protection.'
   };
-  return `You supervise a live Cities: Skylines 1 city. Inspect only this compact JSON snapshot and return one strict JSON object matching the provided output schema. Do not call tools, do not execute commands, and do not invent game facts.\n\nYour job: keep the city stable and grow it cautiously. Prefer no action when evidence is weak. You may propose at most ONE action per cycle.\n\nAllowed proposals only: (1) setZone with one of ResidentialLow, CommercialLow, Industrial, Office and a small radius; for housing, choose a safeZoningCandidates entry exactly; (2) setTaxRate only to lower an existing too-high tax to 8 or 9; (3) setSimulationSpeed speed 3. Never propose bulldozing, moving buildings, changing roads, placing service buildings, deleting entities, pausing the game, or changing utilities; substantial work of those types requires human review. Do not treat LandfillFull by itself as an emergency when there are no building Garbage problems and an active Combustion Plant exists. Do not ask for human review for a single ElectricityNotConnected netNode when no building/growable has an electricity problem; treat a lone orphan terminal as non-actionable background noise. needsHuman=true is reserved for city-wide/multi-building outages, severe population collapse, dangerously low funds, or other consequential/irreversible decisions (not small uncertainties).\n\nFor growth, a budget balance above 100000 and net budget at least -3000 is financially healthy enough for one small zoning step; do not reject expansion because of a small budget-window deficit alone. If residential demand is at least 60, ResidentialLow has fewer than 2300 cells, finances meet that healthy threshold, no critical service problems exist, and safeZoningCandidates include a residential candidate (nearbyHomes>0 and pollutionBufferMeters>=120), propose exactly one ResidentialLow zone at that candidate with radius 8, targeting one zone block only. This is an incremental housing supply step; do not zone multiple areas or add commercial/industrial cells unless their demand is high too. If one of these conditions is not met, hold. The local validator independently enforces demand, area caps, occupied-cell preservation, a dry-run with eligible unoccupied cells, cooldown, pollution buffer, and action budget. If a substantial service-capacity expansion, demolition, new road layout, or financial commitment is needed, set needsHuman=true and explain why; the controller will pause only for independently detected critical conditions. Every action object must include exactly all schema fields: type, zone, center, radius, service, rate, speed. Set unused values to null (and center=null when not zoning).\n\nCurrent snapshot:\n${JSON.stringify(compact)}`;
+  return `You supervise a live Cities: Skylines 1 city. Inspect only this compact JSON snapshot and return one strict JSON object matching the provided output schema. Do not call tools, do not execute commands, and do not invent game facts.\n\nYour job: keep the city stable and grow it cautiously. Prefer no action when evidence is weak. You may propose at most ONE action per cycle.\n\nAllowed proposals only: (1) setZone with one of ResidentialLow, CommercialLow, Industrial, Office and a small radius; for housing, choose a safeZoningCandidates entry exactly; (2) setTaxRate only to lower an existing too-high tax to 8 or 9; (3) setSimulationSpeed speed 3. Never propose bulldozing, moving buildings, changing roads, placing service buildings, deleting entities, pausing the game, or changing utilities; substantial work of those types requires human review. Do not treat LandfillFull by itself as an emergency when there are no building Garbage problems and an active Combustion Plant exists. Do not ask for human review for a single ElectricityNotConnected netNode when no building/growable has an electricity problem; treat a lone orphan terminal as non-actionable background noise. needsHuman=true is reserved for city-wide/multi-building outages, severe population collapse, dangerously low funds, or other consequential/irreversible decisions (not small uncertainties).\n\nFor growth, a budget balance above 100000 and net budget at least -3000 is financially healthy enough for one small zoning step; do not reject expansion because of a small budget-window deficit alone. If residential demand is at least 60, ResidentialLow has fewer than 2300 cells, finances meet that healthy threshold, no critical service problems exist, and safeZoningCandidates include a residential candidate (nearbyHomes>0 and pollutionBufferMeters>=120), propose exactly one ResidentialLow zone at that candidate with radius 8, targeting one zone block only. This is an incremental housing supply step; do not zone multiple areas or add commercial/industrial cells unless their demand is high too. If one of these conditions is not met, hold. The local validator independently enforces demand, area caps, occupied-cell preservation, a dry-run with eligible unoccupied cells, pollution buffer, and action budget. If a substantial service-capacity expansion, demolition, new road layout, or financial commitment is needed, set needsHuman=true and explain why; the controller will pause only for independently detected critical conditions. Every action object must include exactly all schema fields: type, zone, center, radius, service, rate, speed. Set unused values to null (and center=null when not zoning).\n\nCurrent snapshot:\n${JSON.stringify(compact)}`;
 }
 
 function codexPlan(s) {
@@ -308,7 +304,7 @@ function codexPlan(s) {
 
 function rolloverDay() {
   const today = localDay();
-  if (counters.day !== today) { counters = { day: today, modelCalls: 0, mutations: 0 }; lastMutationAt = 0; persistCounters(); }
+  if (counters.day !== today) { counters = { day: today, modelCalls: 0, mutations: 0 }; persistCounters(); }
 }
 async function execute(action, s) {
   if (action.type === 'setSimulationSpeed') return post('/commands/set-simulation-speed', { paused: false, speed: 3 });
@@ -376,7 +372,7 @@ async function cycle() {
           log('action-skipped', { action, result });
         } else {
           log('action-applied', { action, result });
-          if (!['setSimulationSpeed'].includes(action.type)) { counters.mutations += 1; lastMutationAt = Date.now(); persistCounters(); }
+          if (!['setSimulationSpeed'].includes(action.type)) { counters.mutations += 1; persistCounters(); }
         }
         if (!skippedAction && !rejectedAction && (action.type === 'setZone' || action.type === 'setTaxRate')) {
           // Reuse one rolling checkpoint name; an unattended loop must not grow
