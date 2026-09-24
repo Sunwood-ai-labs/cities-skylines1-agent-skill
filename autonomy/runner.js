@@ -201,6 +201,16 @@ function deriveZoningCandidates(s) {
   return candidates;
 }
 
+function describeZoningCandidate(point, s) {
+  const distance = item => item?.position ? Math.hypot(item.position.x - point.x, item.position.z - point.z) : Infinity;
+  const nearbyHomes = (s.growables || []).filter(g => g.service === 'Residential' && distance(g) <= 120).length;
+  const nearbyShops = (s.growables || []).filter(g => g.service === 'Commercial' && distance(g) <= 120).length;
+  const nearbyJobs = (s.growables || []).filter(g => ['Industrial', 'Office'].includes(g.service) && distance(g) <= 160).length;
+  const pollutionSources = (s.facilities || []).filter(f => f.service === 'Garbage' || f.prefab === 'Coal Power Plant');
+  const pollutionBufferMeters = pollutionSources.length ? Math.round(Math.min(...pollutionSources.map(distance))) : null;
+  return { ...point, nearbyHomes, nearbyShops, nearbyJobs, pollutionBufferMeters };
+}
+
 function validateAction(action, s, daily) {
   if (!action || typeof action !== 'object') return '动作格式无效。';
   if (action.type === 'setSimulationSpeed') {
@@ -228,6 +238,12 @@ function validateAction(action, s, daily) {
     const existing = (s.zones || []).find(z => z.zone === zoneName)?.cells || 0;
     const cap = zoneName === 'ResidentialLow' ? 2500 : zoneName === 'CommercialLow' ? 650 : zoneName === 'Industrial' ? 500 : 256;
     if (existing >= cap) return `${zoneName} 已达到自动扩区上限 ${cap} 个格。`;
+    const candidate = deriveZoningCandidates(s).find(p => Math.hypot(p.x - action.center.x, p.z - action.center.z) <= 1);
+    if (!candidate) return '分区中心不在本地预先验证的稀疏候选点中。';
+    const context = describeZoningCandidate(candidate, s);
+    if (zoneName === 'ResidentialLow' && (context.nearbyHomes === 0 || (context.pollutionBufferMeters !== null && context.pollutionBufferMeters < 120))) return '住宅候选点须邻近现有住宅且与垃圾/煤电污染源保持至少 120 米缓冲。';
+    if (zoneName === 'CommercialLow' && context.nearbyShops === 0) return '商业候选点须邻近现有商铺。';
+    if (['Industrial', 'Office'].includes(zoneName) && context.nearbyJobs === 0) return '就业用地候选点须邻近现有工作岗位区。';
     if (nearestRoadDistance(action.center, s.roadSegments) > 60) return '候选分区中心离可达道路超过 60 米。';
     const nearbyDevelopment = (s.growables || []).some(g => g.position && Math.hypot(g.position.x - action.center.x, g.position.z - action.center.z) <= 160);
     if (!nearbyDevelopment) return '候选地不在已有社区附近，不自动向外跳跃扩张。';
@@ -244,10 +260,10 @@ function makePrompt(s) {
     growableCountsByService: byService,
     growablesWithProblems: (s.growables || []).filter(x => x.problems || x.abandoned).slice(0, 20),
     facilities: s.facilities,
-    safeZoningCandidates: deriveZoningCandidates(s),
-    roadAccessHint: 'If zoning is worthwhile, use one of safeZoningCandidates exactly. The local validator also enforces demand, area caps, occupied-cell preservation, cooldown, and action budget.'
+    safeZoningCandidates: deriveZoningCandidates(s).map(point => describeZoningCandidate(point, s)),
+    roadAccessHint: 'If zoning is worthwhile, use one of safeZoningCandidates exactly. Residential candidates must have nearbyHomes>0 and pollutionBufferMeters>=120. The local validator also enforces demand, area caps, occupied-cell preservation, cooldown, and action budget.'
   };
-  return `You supervise a live Cities: Skylines 1 city. Inspect only this compact JSON snapshot and return one strict JSON object matching the provided output schema. Do not call tools, do not execute commands, and do not invent game facts.\n\nYour job: keep the city stable and grow it cautiously. Prefer no action when evidence is weak. You may propose at most ONE action per cycle.\n\nAllowed proposals only: (1) setZone with one of ResidentialLow, CommercialLow, Industrial, Office and a small radius; zone only where demand is high and existing development/road access support it; choose from safeZoningCandidates exactly; (2) setTaxRate only to lower an existing too-high tax to 8 or 9; (3) setSimulationSpeed speed 3. Never propose bulldozing, moving buildings, changing roads, placing service buildings, deleting entities, pausing the game, or changing utilities; substantial work of those types requires human review. Do not treat LandfillFull by itself as an emergency when there are no building Garbage problems and an active Combustion Plant exists. Do not ask for human review for a single ElectricityNotConnected netNode when no building/growable has an electricity problem; treat a lone orphan terminal as non-actionable background noise. needsHuman=true is reserved for city-wide/multi-building outages, severe population collapse, dangerously low funds, or other consequential/irreversible decisions (not small uncertainties). Never propose more residential zoning merely because demand is high if the current city has unresolved critical-service issues or finances are distressed. If a substantial service-capacity expansion, demolition, new road layout, or financial commitment is needed, set needsHuman=true and explain why; the controller will pause only for independently detected critical conditions. Every action object must include exactly all schema fields: type, zone, center, radius, service, rate, speed. Set unused values to null (and center=null when not zoning).\n\nCurrent snapshot:\n${JSON.stringify(compact)}`;
+  return `You supervise a live Cities: Skylines 1 city. Inspect only this compact JSON snapshot and return one strict JSON object matching the provided output schema. Do not call tools, do not execute commands, and do not invent game facts.\n\nYour job: keep the city stable and grow it cautiously. Prefer no action when evidence is weak. You may propose at most ONE action per cycle.\n\nAllowed proposals only: (1) setZone with one of ResidentialLow, CommercialLow, Industrial, Office and a small radius; zone only where demand is high and existing development/road access support it; choose from safeZoningCandidates exactly; (2) setTaxRate only to lower an existing too-high tax to 8 or 9; (3) setSimulationSpeed speed 3. Never propose bulldozing, moving buildings, changing roads, placing service buildings, deleting entities, pausing the game, or changing utilities; substantial work of those types requires human review. Do not treat LandfillFull by itself as an emergency when there are no building Garbage problems and an active Combustion Plant exists. Do not ask for human review for a single ElectricityNotConnected netNode when no building/growable has an electricity problem; treat a lone orphan terminal as non-actionable background noise. needsHuman=true is reserved for city-wide/multi-building outages, severe population collapse, dangerously low funds, or other consequential/irreversible decisions (not small uncertainties).\n\nFor growth, a budget balance above 100000 and net budget at least -3000 is financially healthy enough for one small zoning step; do not reject expansion because of a small budget-window deficit alone. If residential demand is at least 60, ResidentialLow has fewer than 2300 cells, finances meet that healthy threshold, no critical service problems exist, and safeZoningCandidates include a residential candidate (nearbyHomes>0 and pollutionBufferMeters>=120), propose exactly one ResidentialLow zone at that candidate with radius 16. This is an incremental housing supply step; do not zone multiple areas or add commercial/industrial cells unless their demand is high too. If one of these conditions is not met, hold. The local validator still independently enforces demand, area caps, occupied-cell preservation, cooldown, road/development distance, pollution buffer, and action budget. If a substantial service-capacity expansion, demolition, new road layout, or financial commitment is needed, set needsHuman=true and explain why; the controller will pause only for independently detected critical conditions. Every action object must include exactly all schema fields: type, zone, center, radius, service, rate, speed. Set unused values to null (and center=null when not zoning).\n\nCurrent snapshot:\n${JSON.stringify(compact)}`;
 }
 
 function codexPlan(s) {
@@ -378,4 +394,4 @@ if (require.main === module) {
   main().catch(error => { log('fatal', { error: error.stack || error.message }); status('fatal', { error: error.message }); process.exitCode = 1; });
 }
 
-module.exports = { deriveZoningCandidates, evaluateMajor, nearestRoadDistance, readConfig, validateAction };
+module.exports = { deriveZoningCandidates, describeZoningCandidate, evaluateMajor, nearestRoadDistance, readConfig, validateAction };
