@@ -42,6 +42,8 @@ The goal is simple: stop relying on screenshots for city state. The bridge expos
 
 Every game-state API request is appended to a compact CS1 UI console, so recent agent activity stays visible while you work.
 
+An optional [local autonomy supervisor](autonomy/README.md) can continuously monitor a loaded city using the signed-in Codex CLI. It defaults to observe-only; bounded auto mode is opt-in, validates every recommendation locally, and pauses for human input on major risks.
+
 ![API notification overlay](docs/assets/api-notification.jpg)
 
 ### Agent-Built Starter City

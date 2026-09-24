@@ -1,0 +1,33 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["summary", "needsHuman", "humanReason", "actions"],
+  "properties": {
+    "summary": { "type": "string", "maxLength": 500 },
+    "needsHuman": { "type": "boolean" },
+    "humanReason": { "type": "string", "maxLength": 500 },
+    "actions": {
+      "type": "array",
+      "maxItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "zone", "center", "radius", "service", "rate", "speed"],
+        "properties": {
+          "type": { "type": "string", "enum": ["setZone", "setTaxRate", "setSimulationSpeed"] },
+          "zone": { "type": ["string", "null"], "enum": ["ResidentialLow", "CommercialLow", "Industrial", "Office", null] },
+          "center": {
+            "type": ["object", "null"],
+            "additionalProperties": false,
+            "required": ["x", "z"],
+            "properties": { "x": { "type": "number" }, "z": { "type": "number" } }
+          },
+          "radius": { "type": ["number", "null"] },
+          "service": { "type": ["string", "null"], "enum": ["Residential", "Commercial", "Industrial", "Office", null] },
+          "rate": { "type": ["number", "null"], "enum": [8, 9, null] },
+          "speed": { "type": ["number", "null"], "enum": [3, null] }
+        }
+      }
+    }
+  }
+}
