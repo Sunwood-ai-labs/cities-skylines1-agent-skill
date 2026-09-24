@@ -18,6 +18,10 @@ const page = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
 const RETENTION_MS = 60 * 60 * 1000;
 const MAX_SAMPLES = 1200;
 const MAX_FILE_BYTES = 512 * 1024;
+const AUTONOMY_EVENT_TYPES = new Set(['model-plan', 'action-applied', 'action-skipped', 'action-rejected', 'human-review-required', 'autosave-requested']);
+const MAX_AUTONOMY_EVENTS = 20;
+const AUTONOMY_RETENTION_MS = 60 * 60 * 1000;
+const AUTONOMY_LOG = path.join(__dirname, '..', 'autonomy', 'runtime', 'autonomy.log');
 let latest = null;
 let samples = [];
 let detailCache = null;
@@ -59,6 +63,58 @@ function toSample(item) {
 }
 
 function finiteOrNull(value) { return Number.isFinite(value) ? value : null; }
+
+function actionLabel(action) {
+  if (!action) return '城市管理操作';
+  if (action.type === 'setZone') {
+    const zones = { ResidentialLow: '住宅', CommercialLow: '商业', Industrial: '工业', Office: '办公' };
+    return `划分${zones[action.zone] || action.zone}用地`;
+  }
+  if (action.type === 'setTaxRate') return `调整${action.service || ''}税率至 ${action.rate}%`;
+  if (action.type === 'setSimulationSpeed') return `模拟速度设为 ${action.speed} 倍`;
+  return '城市管理操作';
+}
+
+function autonomyEventText(event) {
+  if (event.message === 'model-plan') {
+    if (event.needsHuman) return `需要人工决策：${event.humanReason || event.summary || '重大城市问题'}`;
+    return event.actions?.length ? `自治计划：${actionLabel(event.actions[0])}` : `自治巡查：${event.summary || '暂不需要操作'}`;
+  }
+  if (event.message === 'action-applied') {
+    const amount = Number(event.result?.changedCells || 0);
+    return `${actionLabel(event.action)}${amount ? `（${amount} 格）` : ''}`;
+  }
+  if (event.message === 'action-skipped') return `操作已跳过：${event.result?.reason || '预检未通过'}`;
+  if (event.message === 'action-rejected') return `操作被安全规则拦截：${event.reason || '不符合规则'}`;
+  if (event.message === 'human-review-required') return `等待人工决策：${event.reason || '需要人工检查'}`;
+  if (event.message === 'autosave-requested') return '已请求保存自动存档';
+  return '';
+}
+
+function readAutonomyEvents(now = Date.now()) {
+  try {
+    const content = fs.readFileSync(AUTONOMY_LOG, 'utf8');
+    const cutoff = now - AUTONOMY_RETENTION_MS;
+    return content.split('\n').filter(Boolean).flatMap(line => {
+      try {
+        const event = JSON.parse(line);
+        const at = Date.parse(event.at);
+        if (!AUTONOMY_EVENT_TYPES.has(event.message) || !Number.isFinite(at) || at < cutoff || at > now + 60000) return [];
+        const text = autonomyEventText(event).replace(/[\r\n\t]+/g, ' ').trim().slice(0, 240);
+        return text ? [{ at: new Date(at).toISOString(), type: event.message, text }] : [];
+      } catch (_) { return []; }
+    }).slice(-MAX_AUTONOMY_EVENTS);
+  } catch (_) { return []; }
+}
+
+function sanitizeAutonomyEvents(events, now = Date.now()) {
+  const cutoff = now - AUTONOMY_RETENTION_MS;
+  if (!Array.isArray(events)) return [];
+  return events.filter(event => event && AUTONOMY_EVENT_TYPES.has(event.type) && Number.isFinite(Date.parse(event.at)))
+    .map(event => ({ at: new Date(event.at).toISOString(), type: event.type, text: String(event.text || '').replace(/[\r\n\t]+/g, ' ').trim().slice(0, 240) }))
+    .filter(event => Number.isFinite(Date.parse(event.at)) && Date.parse(event.at) >= cutoff && Date.parse(event.at) <= now + 60000 && event.text)
+    .sort((a, b) => Date.parse(a.at) - Date.parse(b.at)).slice(-MAX_AUTONOMY_EVENTS);
+}
 
 function prune(now = Date.now()) {
   const cutoff = now - RETENTION_MS;
@@ -138,7 +194,8 @@ async function collect() {
     problems: { total: detailCache.problems.total, countsByProblem: detailCache.problems.countsByProblem },
     zones: { zonedCells: detailCache.zones.zonedCells, zones: detailCache.zones.zones },
     facilities: { total: detailCache.facilities.total, countsByService: detailCache.facilities.countsByService },
-    growables: { total: detailCache.growables.total, countsByService: detailCache.growables.countsByService }
+    growables: { total: detailCache.growables.total, countsByService: detailCache.growables.countsByService },
+    autonomyEvents: readAutonomyEvents()
   };
 }
 
@@ -170,7 +227,8 @@ else {
       req.on('data', chunk => { raw += chunk; if (raw.length > 262144) req.destroy(); });
       req.on('end', () => {
         try {
-          const item = JSON.parse(raw);
+          const received = JSON.parse(raw);
+          const item = { ...received, autonomyEvents: sanitizeAutonomyEvents(received.autonomyEvents) };
           const sample = toSample(item);
           const age = Date.now() - Date.parse(item.at);
           if (item.version !== 2 || !sample || age < -60000 || age > RETENTION_MS) throw new Error('invalid or expired snapshot');

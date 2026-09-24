@@ -10,7 +10,7 @@ test('migrates old history, drops expired data, and stores compact bounded sampl
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'city-dashboard-test-'));
   const file = path.join(directory, 'history.json');
   const now = Date.now();
-  const snapshot = at => ({ version: 2, at: new Date(at).toISOString(), summary: { gameTime: '2027-01-01', citizens: { count: 2330 }, demand: { residential: 10, commercial: 5, workplace: 0 } }, economy: { balance: 100000, balanceDelta: 100, income: 4000, expenses: 2000, net: 2000 }, problems: { total: 0 }, zones: { zones: [] }, facilities: { total: 1 }, growables: { total: 215, countsByService: { Residential: 155, Commercial: 36, Industrial: 23, Office: 1 } }, taxes: [] });
+  const snapshot = at => ({ version: 2, at: new Date(at).toISOString(), summary: { gameTime: '2027-01-01', citizens: { count: 2330 }, demand: { residential: 10, commercial: 5, workplace: 0 } }, economy: { balance: 100000, balanceDelta: 100, income: 4000, expenses: 2000, net: 2000 }, problems: { total: 0 }, zones: { zones: [] }, facilities: { total: 1 }, growables: { total: 215, countsByService: { Residential: 155, Commercial: 36, Industrial: 23, Office: 1 } }, autonomyEvents: [{ at: new Date(at).toISOString(), type: 'action-applied', text: '划分住宅用地（6 格）' }, { at: new Date(at - 2 * 3600000).toISOString(), type: 'action-applied', text: '旧事件' }, { at: new Date(at).toISOString(), type: 'unsafe-event', text: '未知事件' }], taxes: [] });
   fs.writeFileSync(file, JSON.stringify([snapshot(now - 5 * 3600000), snapshot(now - 60000)]));
   const port = 40000 + Math.floor(Math.random() * 20000);
   const child = spawn(process.execPath, [path.join(__dirname, 'server.js'), '--relay'], { env: { ...process.env, CITY_PUSH_TOKEN: 'test-secret', CITY_DASHBOARD_PORT: String(port), CITY_DASHBOARD_DATA: file }, stdio: 'ignore' });
@@ -33,6 +33,8 @@ test('migrates old history, drops expired data, and stores compact bounded sampl
     assert.equal(data.samples[0].residentialBuildings, 155);
     assert.equal(data.samples[0].commercialBuildings, 36);
     assert.equal(data.samples[0].industrialBuildings, 23);
+    assert.equal(data.latest.autonomyEvents.length, 1);
+    assert.equal(data.latest.autonomyEvents[0].text, '划分住宅用地（6 格）');
     assert.ok(!data.samples[0].summary, 'history sample must not duplicate full snapshot');
     assert.ok(fs.statSync(file).size < 512 * 1024);
   } finally {
