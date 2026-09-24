@@ -13,5 +13,7 @@ pruned every minute even if the local game stops pushing.
 
 The bridge exposes population, demand, zones, facilities, tax rates, problems,
 simulation state, treasury balance, cash change, and budget-window income and
-expenses. Historical charts show population, treasury balance, income,
-expenses, net budget and demand.
+expenses. The dashboard also shows actual growable building counts for
+residential, commercial, and industrial services (separate from zoned land
+cells). Historical charts show population, treasury balance, income, expenses,
+net budget and demand.

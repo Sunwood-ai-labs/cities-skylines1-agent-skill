@@ -41,6 +41,7 @@ function toSample(item) {
   const finance = item.economy || {};
   const demand = item.summary.demand || {};
   const zoneCount = name => (item.zones?.zones || []).find(x => x.zone === name)?.cells;
+  const buildingCount = name => item.growables?.countsByService?.[name];
   return {
     at: item.at, gameTime: item.summary.gameTime, population: item.summary.citizens.count,
     problems: item.problems?.total || 0,
@@ -50,7 +51,10 @@ function toSample(item) {
     workplaceDemand: finiteOrNull(demand.workplace),
     residentialCells: finiteOrNull(zoneCount('ResidentialLow')),
     commercialCells: finiteOrNull(zoneCount('CommercialLow')),
-    industrialCells: finiteOrNull(zoneCount('Industrial'))
+    industrialCells: finiteOrNull(zoneCount('Industrial')),
+    residentialBuildings: finiteOrNull(buildingCount('Residential')),
+    commercialBuildings: finiteOrNull(buildingCount('Commercial')),
+    industrialBuildings: finiteOrNull(buildingCount('Industrial'))
   };
 }
 
@@ -118,10 +122,14 @@ function requestJson(url, options = {}) {
 async function collect() {
   const base = 'http://127.0.0.1:32123';
   const includeDetails = !detailCache || Date.now() - detailsAt >= detailInterval;
-  const state = await requestJson(base + '/state/dashboard?includeDetails=' + includeDetails);
+  const [state, growables] = await Promise.all([
+    requestJson(base + '/state/dashboard?includeDetails=' + includeDetails),
+    includeDetails ? requestJson(base + '/state/growables?limit=0') : Promise.resolve(null)
+  ]);
   if (!state.ok || !state.summary || !state.economy?.finance) throw new Error('game dashboard state unavailable');
   if (state.detailsIncluded) {
-    detailCache = { problems: state.problems, zones: state.zones, facilities: state.facilities };
+    if (!growables?.ok || !growables.countsByService) throw new Error('game building-count state unavailable');
+    detailCache = { problems: state.problems, zones: state.zones, facilities: state.facilities, growables };
     detailsAt = Date.now();
   }
   return {
@@ -129,7 +137,8 @@ async function collect() {
     economy: state.economy.finance, taxes: state.economy.aggregateTaxRates,
     problems: { total: detailCache.problems.total, countsByProblem: detailCache.problems.countsByProblem },
     zones: { zonedCells: detailCache.zones.zonedCells, zones: detailCache.zones.zones },
-    facilities: { total: detailCache.facilities.total, countsByService: detailCache.facilities.countsByService }
+    facilities: { total: detailCache.facilities.total, countsByService: detailCache.facilities.countsByService },
+    growables: { total: detailCache.growables.total, countsByService: detailCache.growables.countsByService }
   };
 }
 
