@@ -82,12 +82,13 @@ properties in a private `autonomy/config.json` (never commit it):
 - `CITY_AUTONOMY_MODEL_INTERVAL_MINUTES` (default 60; minimum 5)
 - `CITY_AUTONOMY_MAX_MODEL_CALLS_PER_DAY` (default 24)
 - `CITY_AUTONOMY_MAX_MUTATIONS_PER_DAY` (default 6)
-- `CITY_AUTONOMY_MUTATION_COOLDOWN_MINUTES` (default 120)
 - `CITY_AUTONOMY_MIN_BALANCE` (default 30000)
 - `CITY_AUTONOMY_CRITICAL_PROBLEMS` (default 5)
 - `CITY_AUTONOMY_MODEL` / `CODEX_BIN`
 
 Daily model-call and mutation counters persist across process restarts for the
-local calendar day; a restart cannot reset the usage guard.
+local calendar day; a restart cannot reset the usage guard. There is no
+time-based cooldown between successful city changes; decisions still run on
+the model interval and remain bounded by the daily mutation limit.
 
 Tests: `node --test autonomy/runner.test.js`.
