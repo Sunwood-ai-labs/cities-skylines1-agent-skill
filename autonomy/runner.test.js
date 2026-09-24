@@ -42,10 +42,11 @@ test('derives sparse frontage points only beside roads near existing development
 test('uses only real residential hole candidates and fails closed on old bridge preflight', () => {
   const city = sample();
   city.residentialHoleCandidates = [
-    { blockId: 1, position: { x: 10, z: 20 }, unzonedCells: 8 },
-    { blockId: 2, position: { x: 90, z: 10 }, unzonedCells: 2 }
+    { blockId: 1, position: { x: 10, z: 20 }, unzonedCells: 8, eligibleCells: 6 },
+    { blockId: 2, position: { x: 90, z: 10 }, unzonedCells: 8, eligibleCells: 0 },
+    { blockId: 3, position: { x: 100, z: 10 }, unzonedCells: 2, eligibleCells: 6 }
   ];
-  assert.deepEqual(deriveResidentialHoleCandidates(city), [{ x: 10, z: 20 }]);
+  assert.deepEqual(deriveResidentialHoleCandidates(city), [{ x: 10, z: 20, eligibleCells: 6 }]);
   assert.equal(setZonePreflightHasChanges({ matchingBlocks: 1, skippedOccupiedBlocks: 1 }), false);
   assert.equal(setZonePreflightHasChanges({ eligibleCells: 0 }), false);
   assert.equal(setZonePreflightHasChanges({ eligibleCells: 6 }), true);

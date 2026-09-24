@@ -133,13 +133,24 @@ async function planningSnapshot(base) {
     get('/state/zones'), get('/state/facilities?limit=500'), get('/state/growables?limit=500'),
     get('/state/networks?limit=5000&service=Road'), get('/state/zone-anomalies?limit=200&includeUnzonedHoles=true')
   ]);
+  const residentialHoles = (zoneAnomalies.anomalies || []).filter(x => x.type === 'patchyUnzonedHoles' && x.dominantZone === 'ResidentialLow' && x.unzonedCells >= 4);
+  const residentialHoleCandidates = await Promise.all(residentialHoles.map(async hole => {
+    try {
+      const preview = await post('/commands/set-zone', {
+        zone: 'ResidentialLow', preserveOccupied: true, center: { x: hole.position.x, z: hole.position.z }, radius: 8, dryRun: true
+      });
+      return { blockId: hole.blockId, position: hole.position, unzonedCells: hole.unzonedCells, zonedCells: hole.zonedCells, eligibleCells: Number(preview.eligibleCells) || 0 };
+    } catch (_) {
+      return { blockId: hole.blockId, position: hole.position, unzonedCells: hole.unzonedCells, zonedCells: hole.zonedCells, eligibleCells: 0 };
+    }
+  }));
   return {
     ...base,
     zones: (zones.zones || []).map(x => ({ zone: x.zone, cells: x.cells, hectares: x.areaHectares })),
     facilities: (facilities.facilities || []).slice(0, 80).map(f => ({ id: f.id, prefab: f.prefab, service: f.service, active: f.active, problems: f.problems, position: f.position, width: f.width, length: f.length })),
     growables: (growables.growables || []).slice(0, 250).map(g => ({ id: g.id, service: g.service, level: g.level, problems: g.problems, abandoned: g.abandoned, position: g.position, width: g.width, length: g.length })),
     roadSegments: (roads.segments || []).map(r => ({ start: r.start, end: r.end })),
-    residentialHoleCandidates: (zoneAnomalies.anomalies || []).filter(x => x.type === 'patchyUnzonedHoles' && x.dominantZone === 'ResidentialLow' && x.unzonedCells >= 4).map(x => ({ blockId: x.blockId, position: x.position, unzonedCells: x.unzonedCells, zonedCells: x.zonedCells }))
+    residentialHoleCandidates
   };
 }
 
@@ -199,7 +210,7 @@ function deriveZoningCandidates(s) {
   return candidates;
 }
 function deriveResidentialHoleCandidates(s) {
-  return (s.residentialHoleCandidates || []).filter(x => x.position && Number(x.unzonedCells) >= 4).map(x => ({ x: x.position.x, z: x.position.z }));
+  return (s.residentialHoleCandidates || []).filter(x => x.position && Number(x.unzonedCells) >= 4 && Number(x.eligibleCells) > 0).map(x => ({ x: x.position.x, z: x.position.z, eligibleCells: Number(x.eligibleCells) }));
 }
 
 function describeZoningCandidate(point, s) {
