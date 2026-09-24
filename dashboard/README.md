@@ -16,6 +16,7 @@ simulation state, treasury balance, cash change, and budget-window income and
 expenses. The dashboard also shows actual growable building counts for
 residential, commercial, and industrial services (separate from zoned land
 cells). Historical charts show population, treasury balance, income, expenses,
-net budget and demand. A scrolling banner displays up to 20 recent autonomy
-decisions/actions; event text is compacted locally and the relay keeps only
-events from the last hour.
+net budget, demand, and residential/commercial/industrial building counts. A
+three-line autonomy feed pushes older entries upward only when new events
+arrive; it remains still otherwise. Event text is compacted locally and the
+relay keeps only the latest 20 events from the last hour.
