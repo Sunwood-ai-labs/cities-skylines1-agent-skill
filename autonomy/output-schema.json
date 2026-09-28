@@ -12,9 +12,9 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["type", "zone", "center", "radius", "service", "rate", "speed"],
+        "required": ["type", "zone", "center", "radius", "service", "rate", "speed", "roadPrefab", "start", "end"],
         "properties": {
-          "type": { "type": "string", "enum": ["setZone", "setTaxRate", "setSimulationSpeed"] },
+          "type": { "type": "string", "enum": ["buildRoad", "setZone", "setTaxRate", "setSimulationSpeed"] },
           "zone": { "type": ["string", "null"], "enum": ["ResidentialLow", "CommercialLow", "Industrial", "Office", null] },
           "center": {
             "type": ["object", "null"],
@@ -25,7 +25,20 @@
           "radius": { "type": ["number", "null"] },
           "service": { "type": ["string", "null"], "enum": ["Residential", "Commercial", "Industrial", "Office", null] },
           "rate": { "type": ["number", "null"], "enum": [8, 9, null] },
-          "speed": { "type": ["number", "null"], "enum": [3, null] }
+          "speed": { "type": ["number", "null"], "enum": [3, null] },
+          "roadPrefab": { "type": ["string", "null"], "enum": ["Basic Road", null] },
+          "start": {
+            "type": ["object", "null"],
+            "additionalProperties": false,
+            "required": ["x", "z"],
+            "properties": { "x": { "type": "number" }, "z": { "type": "number" } }
+          },
+          "end": {
+            "type": ["object", "null"],
+            "additionalProperties": false,
+            "required": ["x", "z"],
+            "properties": { "x": { "type": "number" }, "z": { "type": "number" } }
+          }
         }
       }
     }

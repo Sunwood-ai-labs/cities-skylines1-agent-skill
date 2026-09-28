@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { deriveResidentialHoleCandidates, deriveZoningCandidates, describeZoningCandidate, evaluateMajor, nearestRoadDistance, setZonePreflightHasChanges, validateAction } = require('./runner');
+const { deriveResidentialHoleCandidates, deriveRoadBuildCandidates, deriveZoningCandidates, describeZoningCandidate, evaluateMajor, nearestRoadDistance, readConfig, setZonePreflightHasChanges, validateAction } = require('./runner');
 
 function sample() {
   return {
@@ -50,6 +50,8 @@ test('uses only real residential hole candidates and fails closed on old bridge 
   assert.equal(setZonePreflightHasChanges({ matchingBlocks: 1, skippedOccupiedBlocks: 1 }), false);
   assert.equal(setZonePreflightHasChanges({ eligibleCells: 0 }), false);
   assert.equal(setZonePreflightHasChanges({ eligibleCells: 6 }), true);
+  city.residentialFrontageCandidates = [{ x: 30, z: 40, eligibleCells: 4 }];
+  assert.deepEqual(deriveResidentialHoleCandidates(city), [{ x: 10, z: 20, eligibleCells: 6 }, { x: 30, z: 40, eligibleCells: 4 }]);
 });
 
 test('only approves small, demanded, connected zoning actions', () => {
@@ -59,7 +61,7 @@ test('only approves small, demanded, connected zoning actions', () => {
   assert.equal(validateAction(action, city, daily), '');
   assert.match(validateAction({ ...action, radius: 80 }, city, daily), /半径/);
   assert.match(validateAction({ ...action, center: { x: 500, z: 500 } }, city, daily), /候选点/);
-  assert.match(validateAction(action, city, { mutations: 6 }), /每日自动变更上限/);
+  assert.match(validateAction(action, city, { mutations: readConfig().maxMutationsPerDay }), /每日自动变更上限/);
 });
 
 test('allows consecutive validated city changes without a time cooldown', () => {
@@ -77,6 +79,27 @@ test('rejects housing candidates next to pollution sources', () => {
   assert.equal(described.nearbyHomes, 1);
   assert.ok(described.pollutionBufferMeters < 120);
   assert.match(validateAction({ type: 'setZone', zone: 'ResidentialLow', center, radius: 16 }, city, { mutations: 0 }), /污染源/);
+});
+
+test('creates only short road extensions from existing local-road nodes into clear residential gaps', () => {
+  const city = sample();
+  city.roadSegments = [{ startNodeId: 1, endNodeId: 2, prefab: 'Basic Road', start: { x: -50, z: 0 }, end: { x: -100, z: 0 } }];
+  city.residentialHoleCandidates = [{ blockId: 7, position: { x: 0, z: 0 }, unzonedCells: 12, eligibleCells: 0 }];
+  city.growables = [{ service: 'Residential', position: { x: 0, z: 40 } }];
+  const candidates = deriveRoadBuildCandidates(city);
+  assert.equal(candidates.length, 1);
+  assert.equal(candidates[0].roadPrefab, 'Basic Road');
+  assert.ok(candidates[0].length >= 16 && candidates[0].length <= 48);
+  assert.ok(candidates[0].buildingClearance >= 18);
+  city.roadBuildCandidates = candidates;
+  const action = { type: 'buildRoad', roadPrefab: 'Basic Road', start: candidates[0].start, end: candidates[0].end };
+  assert.equal(validateAction(action, city, { mutations: 0 }), '');
+  assert.match(validateAction({ ...action, end: { x: 100, z: 100 } }, city, { mutations: 0 }), /安全候选列表/);
+  city.growables = [{ service: 'Residential', position: { x: -35, z: 1 } }];
+  assert.deepEqual(deriveRoadBuildCandidates(city), []);
+  city.growables = [{ service: 'Residential', position: { x: 0, z: 40 } }];
+  city.roadSegments.push({ startNodeId: 3, endNodeId: 4, prefab: 'Basic Road', start: { x: -35, z: -10 }, end: { x: -35, z: 10 } });
+  assert.deepEqual(deriveRoadBuildCandidates(city), []);
 });
 
 test('tax automation can only lower a high-tax service with an active alert', () => {
