@@ -12,6 +12,17 @@ namespace SkylinesAgentBridge
             NetManager net = NetManager.instance;
             ZoneManager zones = ZoneManager.instance;
             CitizenManager citizens = CitizenManager.instance;
+            DistrictManager districts = DistrictManager.instance;
+            uint hudPopulation = 0;
+            string populationSource = "unavailable";
+            if (districts != null && districts.m_districts != null &&
+                districts.m_districts.m_buffer != null && districts.m_districts.m_buffer.Length > 0)
+            {
+                // Match PopulationInfoViewPanel.population, which reads the
+                // city district (district 0) final population statistic.
+                hudPopulation = districts.m_districts.m_buffer[0].m_populationData.m_finalCount;
+                populationSource = "cityHud";
+            }
 
             StringBuilder json = new StringBuilder();
             json.Append("{\"ok\":true");
@@ -23,7 +34,9 @@ namespace SkylinesAgentBridge
             json.Append(",\"network\":{\"nodes\":").Append(net.m_nodeCount);
             json.Append(",\"segments\":").Append(net.m_segmentCount);
             json.Append(",\"lanes\":").Append(net.m_laneCount).Append("}");
-            json.Append(",\"citizens\":{\"count\":").Append(citizens.m_citizenCount).Append("}");
+            json.Append(",\"citizens\":{\"count\":").Append(hudPopulation);
+            json.Append(",\"managerCount\":").Append(citizens.m_citizenCount);
+            json.Append(",\"populationSource\":\"").Append(populationSource).Append("\"}");
             json.Append(",\"demand\":{\"residential\":").Append(zones.m_residentialDemand);
             json.Append(",\"commercial\":").Append(zones.m_commercialDemand);
             json.Append(",\"workplace\":").Append(zones.m_workplaceDemand).Append("}");

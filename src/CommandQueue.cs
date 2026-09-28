@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Generic;
+using System.Collections;
 using System.Threading;
 
 namespace SkylinesAgentBridge
@@ -7,7 +7,11 @@ namespace SkylinesAgentBridge
     public sealed class CommandQueue
     {
         private readonly object gate = new object();
-        private readonly Queue<QueuedCommand> commands = new Queue<QueuedCommand>();
+        // CS1 ships an older Mono runtime that can fail to load the array type
+        // synthesized by Queue<T> when T is a private nested class. Keep the
+        // queued command implementation private, but use the non-generic queue
+        // so the runtime only needs to allocate an object[].
+        private readonly Queue commands = new Queue();
 
         public CommandResult RunSync(Func<CommandResult> work, int timeoutMs)
         {
@@ -41,7 +45,7 @@ namespace SkylinesAgentBridge
                         return;
                     }
 
-                    command = commands.Dequeue();
+                    command = (QueuedCommand)commands.Dequeue();
                 }
 
                 command.Execute();
@@ -55,7 +59,7 @@ namespace SkylinesAgentBridge
             {
                 while (commands.Count > 0)
                 {
-                    commands.Dequeue().Cancel("Level is unloading.");
+                    ((QueuedCommand)commands.Dequeue()).Cancel("Level is unloading.");
                 }
             }
         }

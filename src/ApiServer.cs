@@ -157,6 +157,11 @@ namespace SkylinesAgentBridge
                 return RunOnGameThread(request, delegate { return GameState.BuildGrowablesJson(limit, service); });
             }
 
+            if (request.Method == "GET" && request.Path == "/state/residential-diagnostics")
+            {
+                return RunOnGameThread(request, ResidentialDiagnostics.BuildJson);
+            }
+
             if (request.Method == "GET" && request.Path == "/state/networks")
             {
                 int limit = request.GetQueryInt("limit", 500);

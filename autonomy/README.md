@@ -14,13 +14,21 @@ bridge at `127.0.0.1:32123`; nothing opens a public control endpoint.
 - `assist`: also asks Codex for a structured plan, but never executes it; plans
   are written to the local review file. This is the recommended first test.
 - `auto`: permits at most one small action per model cycle. Allowed actions are
-  a single low-radius zone paint near existing roads/development when demand is
-  high, lowering a tax rate to 8–9 only when a high-tax alert exists, or
-  restoring 3x speed. Occupied zoning is always preserved. Meaningful changes
-  are saved to one rolling checkpoint named `AgentAutoSave-autonomy-latest`, so
-  the loop does not create an unlimited series of multi-megabyte saves. Roads, facilities,
-  utilities, bulldozing, moving buildings, and large service/financial
-  decisions are never automated.
+  first, one short Basic Road extension from an existing local-road node only
+  when it is near a residential gap, has at least 18 m clearance from growable
+  building centers, 24 m from service-building centers and 8 m from other road
+  segments (after the shared-node junction), and city finances are healthy. The road
+  candidate must come from the local geometry validator; the model cannot invent
+  endpoints. When no safe road candidate remains, it may paint one small zone
+  near existing roads/development if demand is high, lower a tax rate to 8–9
+  only when a high-tax alert exists, or restore 3x speed. Occupied zoning is
+  always preserved. Meaningful changes are saved to one rolling checkpoint
+  named `AgentAutoSave-autonomy-latest`, so the loop does not create an unlimited
+  series of multi-megabyte saves. Facilities, utilities, bulldozing, moving
+  buildings, and large service/financial decisions are never automated.
+  Road collision checks use the live network/building snapshot; the bridge's
+  road dry-run itself only validates prefab and length, so endpoint allow-listing
+  and local geometry checks are mandatory.
 - A critical service outage, repeated garbage failures, low treasury, or a
   severe population collapse writes `needs-human.json` and pauses the game.
   An individually full landfill does not trigger this if garbage alerts are

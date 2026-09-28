@@ -31,9 +31,9 @@ function readConfig() {
     codexBin: process.env.CODEX_BIN || process.argv.find(x => x.startsWith('--codex-bin='))?.slice(12) || disk.codexBin || 'codex.exe',
     model: process.env.CITY_AUTONOMY_MODEL || disk.model || '',
     pollMs: n('CITY_AUTONOMY_POLL_SECONDS', 30, 10, 300) * 1000,
-    modelMinIntervalMs: n('CITY_AUTONOMY_MODEL_INTERVAL_MINUTES', 60, 5, 1440) * 60 * 1000,
-    maxModelCallsPerDay: n('CITY_AUTONOMY_MAX_MODEL_CALLS_PER_DAY', 24, 1, 200),
-    maxMutationsPerDay: n('CITY_AUTONOMY_MAX_MUTATIONS_PER_DAY', 6, 1, 50),
+    modelMinIntervalMs: n('CITY_AUTONOMY_MODEL_INTERVAL_MINUTES', 60, 1, 1440) * 60 * 1000,
+    maxModelCallsPerDay: n('CITY_AUTONOMY_MAX_MODEL_CALLS_PER_DAY', 24, 1, 1000),
+    maxMutationsPerDay: n('CITY_AUTONOMY_MAX_MUTATIONS_PER_DAY', 6, 1, 1000),
     minBalance: n('CITY_AUTONOMY_MIN_BALANCE', 30000, 0, 10000000),
     criticalServiceThreshold: n('CITY_AUTONOMY_CRITICAL_PROBLEMS', 5, 1, 100),
     callTimeoutMs: n('CITY_AUTONOMY_MODEL_TIMEOUT_SECONDS', 180, 30, 600) * 1000
@@ -137,20 +137,29 @@ async function planningSnapshot(base) {
   const residentialHoleCandidates = await Promise.all(residentialHoles.map(async hole => {
     try {
       const preview = await post('/commands/set-zone', {
-        zone: 'ResidentialLow', preserveOccupied: true, center: { x: hole.position.x, z: hole.position.z }, radius: 8, dryRun: true
+        zone: 'ResidentialLow', preserveOccupied: true, center: { x: hole.position.x, z: hole.position.z }, radius: 16, dryRun: true
       });
       return { blockId: hole.blockId, position: hole.position, unzonedCells: hole.unzonedCells, zonedCells: hole.zonedCells, eligibleCells: Number(preview.eligibleCells) || 0 };
     } catch (_) {
       return { blockId: hole.blockId, position: hole.position, unzonedCells: hole.unzonedCells, zonedCells: hole.zonedCells, eligibleCells: 0 };
     }
   }));
+  const roadSegments = (roads.segments || []).map(r => ({ start: r.start, end: r.end, startNodeId: r.startNodeId, endNodeId: r.endNodeId, prefab: r.prefab }));
+  const residentialFrontageCandidates = await Promise.all(deriveZoningCandidates({ roadSegments, growables: growables.growables || [] }).map(async point => {
+    try {
+      const preview = await post('/commands/set-zone', { zone: 'ResidentialLow', preserveOccupied: true, center: point, radius: 16, dryRun: true });
+      return { ...point, eligibleCells: Number(preview.eligibleCells) || 0 };
+    } catch (_) { return { ...point, eligibleCells: 0 }; }
+  }));
   return {
     ...base,
     zones: (zones.zones || []).map(x => ({ zone: x.zone, cells: x.cells, hectares: x.areaHectares })),
     facilities: (facilities.facilities || []).slice(0, 80).map(f => ({ id: f.id, prefab: f.prefab, service: f.service, active: f.active, problems: f.problems, position: f.position, width: f.width, length: f.length })),
     growables: (growables.growables || []).slice(0, 250).map(g => ({ id: g.id, service: g.service, level: g.level, problems: g.problems, abandoned: g.abandoned, position: g.position, width: g.width, length: g.length })),
-    roadSegments: (roads.segments || []).map(r => ({ start: r.start, end: r.end })),
-    residentialHoleCandidates
+    roadSegments,
+    residentialHoleCandidates,
+    residentialFrontageCandidates,
+    roadBuildCandidates: deriveRoadBuildCandidates({ summary: base.summary, finance: base.finance, problems: base.problems, roadSegments, facilities: facilities.facilities || [], growables: (growables.growables || []), residentialHoleCandidates })
   };
 }
 
@@ -210,7 +219,70 @@ function deriveZoningCandidates(s) {
   return candidates;
 }
 function deriveResidentialHoleCandidates(s) {
-  return (s.residentialHoleCandidates || []).filter(x => x.position && Number(x.unzonedCells) >= 4 && Number(x.eligibleCells) > 0).map(x => ({ x: x.position.x, z: x.position.z, eligibleCells: Number(x.eligibleCells) }));
+  const holes = (s.residentialHoleCandidates || []).filter(x => x.position && Number(x.unzonedCells) >= 4 && Number(x.eligibleCells) > 0).map(x => ({ x: x.position.x, z: x.position.z, eligibleCells: Number(x.eligibleCells) }));
+  const frontage = (s.residentialFrontageCandidates || []).filter(x => Number(x.eligibleCells) > 0).map(x => ({ x: x.x, z: x.z, eligibleCells: Number(x.eligibleCells) }));
+  return [...new Map([...holes, ...frontage].map(x => [`${x.x}:${x.z}`, x])).values()];
+}
+
+function pointSegmentDistance(point, a, b) {
+  const dx = b.x - a.x, dz = b.z - a.z;
+  const denominator = dx * dx + dz * dz;
+  const t = denominator ? Math.max(0, Math.min(1, ((point.x - a.x) * dx + (point.z - a.z) * dz) / denominator)) : 0;
+  return Math.hypot(point.x - (a.x + t * dx), point.z - (a.z + t * dz));
+}
+
+function orientation(a, b, c) {
+  return (b.x - a.x) * (c.z - a.z) - (b.z - a.z) * (c.x - a.x);
+}
+
+function onSegment(a, b, p) {
+  return p.x >= Math.min(a.x, b.x) - 1e-8 && p.x <= Math.max(a.x, b.x) + 1e-8 && p.z >= Math.min(a.z, b.z) - 1e-8 && p.z <= Math.max(a.z, b.z) + 1e-8;
+}
+
+function segmentDistance(a, b, c, d) {
+  const o1 = orientation(a, b, c), o2 = orientation(a, b, d);
+  const o3 = orientation(c, d, a), o4 = orientation(c, d, b);
+  const crosses = ((o1 > 0 && o2 < 0) || (o1 < 0 && o2 > 0)) && ((o3 > 0 && o4 < 0) || (o3 < 0 && o4 > 0));
+  const touches = (Math.abs(o1) < 1e-8 && onSegment(a, b, c)) || (Math.abs(o2) < 1e-8 && onSegment(a, b, d)) || (Math.abs(o3) < 1e-8 && onSegment(c, d, a)) || (Math.abs(o4) < 1e-8 && onSegment(c, d, b));
+  if (crosses || touches) return 0;
+  return Math.min(pointSegmentDistance(a, c, d), pointSegmentDistance(b, c, d), pointSegmentDistance(c, a, b), pointSegmentDistance(d, a, b));
+}
+
+function deriveRoadBuildCandidates(s) {
+  if (Number(s.summary?.demand?.residential || 0) < 60 || Number(s.finance?.balance) < 100000 || Number(s.finance?.net) < -3000 || evaluateMajor(s)) return [];
+  const roads = s.roadSegments || [];
+  const nodes = new Map();
+  for (const road of roads) {
+    if (!['Basic Road', 'Gravel Road'].includes(road.prefab)) continue;
+    for (const [id, point] of [[road.startNodeId, road.start], [road.endNodeId, road.end]]) {
+      if (id === undefined || !point || !Number.isFinite(point.x) || !Number.isFinite(point.z)) continue;
+      if (!nodes.has(Number(id))) nodes.set(Number(id), { id: Number(id), point });
+    }
+  }
+  const candidates = [];
+  for (const hole of s.residentialHoleCandidates || []) {
+    if (!hole.position || Number(hole.unzonedCells) < 4 || Number(hole.eligibleCells) > 0) continue;
+    if (roads.some(road => road.start && road.end && pointSegmentDistance(hole.position, road.start, road.end) <= 32)) continue;
+    const ranked = [...nodes.values()].map(node => ({ ...node, distance: Math.hypot(node.point.x - hole.position.x, node.point.z - hole.position.z) })).sort((a, b) => a.distance - b.distance);
+    for (const node of ranked.slice(0, 8)) {
+      if (node.distance < 32 || node.distance > 72) continue;
+      const ux = (hole.position.x - node.point.x) / node.distance;
+      const uz = (hole.position.z - node.point.z) / node.distance;
+      const end = { x: Math.round(hole.position.x - 24 * ux), z: Math.round(hole.position.z - 24 * uz) };
+      const length = Math.hypot(end.x - node.point.x, end.z - node.point.z);
+      if (length < 16 || length > 48) continue;
+      const clearance = Math.min(Infinity, ...(s.growables || []).filter(g => g.position).map(g => pointSegmentDistance(g.position, node.point, end)));
+      if (clearance < 18) continue;
+      const facilityClearance = Math.min(Infinity, ...(s.facilities || []).filter(f => f.position).map(f => pointSegmentDistance(f.position, node.point, end)));
+      if (facilityClearance < 24) continue;
+      const trimmedStart = { x: node.point.x + ((end.x - node.point.x) / length) * 10, z: node.point.z + ((end.z - node.point.z) / length) * 10 };
+      const roadClearance = Math.min(Infinity, ...roads.filter(r => r.start && r.end).map(r => segmentDistance(trimmedStart, end, r.start, r.end)));
+      if (roadClearance < 8) continue;
+      candidates.push({ blockId: hole.blockId, start: { x: node.point.x, z: node.point.z }, end, roadPrefab: 'Basic Road', length: Number(length.toFixed(1)), buildingClearance: Number(clearance.toFixed(1)), facilityClearance: Number.isFinite(facilityClearance) ? Number(facilityClearance.toFixed(1)) : null });
+      break;
+    }
+  }
+  return candidates.slice(0, 8);
 }
 
 function describeZoningCandidate(point, s) {
@@ -231,7 +303,7 @@ function validateAction(action, s, daily) {
   if (action.type === 'setSimulationSpeed') {
     return action.speed === 3 ? '' : '只允许维持 3 倍模拟速度。';
   }
-  if (['setZone', 'setTaxRate'].includes(action.type)) {
+  if (['buildRoad', 'setZone', 'setTaxRate'].includes(action.type)) {
     if (daily.mutations >= config.maxMutationsPerDay) return '已达到每日自动变更上限。';
   }
   if (action.type === 'setTaxRate') {
@@ -266,6 +338,16 @@ function validateAction(action, s, daily) {
     if (!nearbyDevelopment) return '候选地不在已有社区附近，不自动向外跳跃扩张。';
     return '';
   }
+  if (action.type === 'buildRoad') {
+    if (daily.mutations >= config.maxMutationsPerDay) return '已达到每日自动变更上限。';
+    if (Number(s.finance.balance) < 100000 || Number(s.finance.net) < -3000) return '财政未达到自动扩建道路的安全条件。';
+    if (action.roadPrefab !== 'Basic Road' || !action.start || !action.end) return '建路类型或端点无效。';
+    const candidate = (s.roadBuildCandidates || []).find(p => ['x', 'z'].every(k => Math.abs(p.start[k] - action.start[k]) <= 1 && Math.abs(p.end[k] - action.end[k]) <= 1));
+    if (!candidate) return '道路端点不在本地验证的安全候选列表中。';
+    const length = Math.hypot(action.end.x - action.start.x, action.end.z - action.start.z);
+    if (length < 16 || length > 48 || candidate.buildingClearance < 18) return '道路长度或建筑安全间距不符合限制。';
+    return '';
+  }
   return `动作 ${String(action.type)} 不在安全白名单中。`;
 }
 
@@ -278,9 +360,10 @@ function makePrompt(s) {
     growablesWithProblems: (s.growables || []).filter(x => x.problems || x.abandoned).slice(0, 20),
     facilities: s.facilities,
     safeZoningCandidates: deriveResidentialHoleCandidates(s).map(point => ({ ...point, ...describeZoningCandidate(point, s) })),
-    roadAccessHint: 'For housing, choose a listed safeZoningCandidates entry exactly. These points come from real residential zone blocks with unzoned cells; the local dry-run enforces cell-level occupancy protection.'
+    roadBuildCandidates: s.roadBuildCandidates || [],
+    roadAccessHint: 'Road priority: if roadBuildCandidates contains entries, propose exactly one listed buildRoad action first. These short Basic Road extensions connect at an existing local-road node, stay clear of buildings and other roads, and end near an existing residential hole. Only after no safe road candidates remain may you zone a listed safeZoningCandidates point. These points include live-preflighted residential holes and empty road frontages near existing homes. Never invent road or zone coordinates.'
   };
-  return `You supervise a live Cities: Skylines 1 city. Inspect only this compact JSON snapshot and return one strict JSON object matching the provided output schema. Do not call tools, do not execute commands, and do not invent game facts.\n\nYour job: keep the city stable and grow it cautiously. Prefer no action when evidence is weak. You may propose at most ONE action per cycle.\n\nAllowed proposals only: (1) setZone with one of ResidentialLow, CommercialLow, Industrial, Office and a small radius; for housing, choose a safeZoningCandidates entry exactly; (2) setTaxRate only to lower an existing too-high tax to 8 or 9; (3) setSimulationSpeed speed 3. Never propose bulldozing, moving buildings, changing roads, placing service buildings, deleting entities, pausing the game, or changing utilities; substantial work of those types requires human review. Do not treat LandfillFull by itself as an emergency when there are no building Garbage problems and an active Combustion Plant exists. Do not ask for human review for a single ElectricityNotConnected netNode when no building/growable has an electricity problem; treat a lone orphan terminal as non-actionable background noise. needsHuman=true is reserved for city-wide/multi-building outages, severe population collapse, dangerously low funds, or other consequential/irreversible decisions (not small uncertainties).\n\nFor growth, a budget balance above 100000 and net budget at least -3000 is financially healthy enough for one small zoning step; do not reject expansion because of a small budget-window deficit alone. If residential demand is at least 60, ResidentialLow has fewer than 2300 cells, finances meet that healthy threshold, no critical service problems exist, and safeZoningCandidates include a residential candidate (nearbyHomes>0 and pollutionBufferMeters>=120), propose exactly one ResidentialLow zone at that candidate with radius 8, targeting one zone block only. This is an incremental housing supply step; do not zone multiple areas or add commercial/industrial cells unless their demand is high too. If one of these conditions is not met, hold. The local validator independently enforces demand, area caps, occupied-cell preservation, a dry-run with eligible unoccupied cells, pollution buffer, and action budget. If a substantial service-capacity expansion, demolition, new road layout, or financial commitment is needed, set needsHuman=true and explain why; the controller will pause only for independently detected critical conditions. Every action object must include exactly all schema fields: type, zone, center, radius, service, rate, speed. Set unused values to null (and center=null when not zoning).\n\nCurrent snapshot:\n${JSON.stringify(compact)}`;
+  return `You supervise a live Cities: Skylines 1 city. Inspect only this compact JSON snapshot and return one strict JSON object matching the provided output schema. Do not call tools, do not execute commands, and do not invent game facts.\n\nYour job: keep the city stable and grow it cautiously. Prefer no action when evidence is weak. You may propose at most ONE action per cycle.\n\nAllowed proposals only: (1) buildRoad using one roadBuildCandidates entry exactly; (2) setZone with one of ResidentialLow, CommercialLow, Industrial, Office and a small radius; for housing, choose a safeZoningCandidates entry exactly; (3) setTaxRate only to lower an existing too-high tax to 8 or 9; (4) setSimulationSpeed speed 3. Road-first rule: when roadBuildCandidates is non-empty, propose exactly one listed buildRoad action before zoning. A buildRoad action must use type=buildRoad, the listed start/end, roadPrefab=Basic Road, and null for unused fields. Never invent endpoints or build multiple segments per cycle. Never propose bulldozing, moving buildings, deleting entities, placing service buildings, pausing the game, or changing utilities. Do not treat LandfillFull by itself as an emergency when there are no building Garbage problems and an active Combustion Plant exists. Do not ask for human review for a single ElectricityNotConnected netNode when no building/growable has an electricity problem; treat a lone orphan terminal as non-actionable background noise. needsHuman=true is reserved for city-wide/multi-building outages, severe population collapse, dangerously low funds, or other consequential decisions (not small uncertainties).\n\nFor growth, a budget balance above 100000 and net budget at least -3000 is financially healthy enough for one small zoning step; do not reject expansion because of a small budget-window deficit alone. Only when roadBuildCandidates is empty, if residential demand is at least 60, ResidentialLow has fewer than 2300 cells, finances meet that healthy threshold, no critical service problems exist, and safeZoningCandidates include a residential candidate (nearbyHomes>0 and pollutionBufferMeters>=120), propose exactly one ResidentialLow zone at that candidate with radius 16. Do not zone multiple areas or add commercial/industrial cells unless their demand is high too. If one of these conditions is not met, hold. The local validator independently enforces demand, area caps, occupied-cell preservation, cell-level zoning preflight, road endpoint allow-listing, building/road clearances, pollution buffer, and action budget. Every action object must include exactly all schema fields: type, zone, center, radius, service, rate, speed, roadPrefab, start, end. Set unused values to null.\n\nCurrent snapshot:\n${JSON.stringify(compact)}`;
 }
 
 function codexPlan(s) {
@@ -320,6 +403,12 @@ function rolloverDay() {
 async function execute(action, s) {
   if (action.type === 'setSimulationSpeed') return post('/commands/set-simulation-speed', { paused: false, speed: 3 });
   if (action.type === 'setTaxRate') return post('/commands/set-tax-rate', { service: action.service, rate: Number(action.rate) });
+  if (action.type === 'buildRoad') {
+    const body = { roadPrefab: action.roadPrefab, start: action.start, end: action.end, name: 'Agent Residential Access' };
+    const preview = await post('/commands/build-network', { ...body, dryRun: true });
+    if (!preview.ok) return { ok: true, skipped: true, reason: preview.message || '道路预检未通过；未建路。' };
+    return post('/commands/build-network', body);
+  }
   if (action.type === 'setZone') {
     const preview = await post('/commands/set-zone', { zone: action.zone, preserveOccupied: true, center: action.center, radius: Number(action.radius), dryRun: true });
     if (!Number.isFinite(Number(preview.eligibleCells))) return { ok: true, skipped: true, reason: 'Bridge lacks cell-level zoning preflight; no change was made.' };
@@ -385,7 +474,7 @@ async function cycle() {
           log('action-applied', { action, result });
           if (!['setSimulationSpeed'].includes(action.type)) { counters.mutations += 1; persistCounters(); }
         }
-        if (!skippedAction && !rejectedAction && (action.type === 'setZone' || action.type === 'setTaxRate')) {
+        if (!skippedAction && !rejectedAction && ['buildRoad', 'setZone', 'setTaxRate'].includes(action.type)) {
           // Reuse one rolling checkpoint name; an unattended loop must not grow
           // the local Saves directory by generating a new multi-megabyte save.
           const name = 'AgentAutoSave-autonomy-latest';
@@ -421,4 +510,4 @@ if (require.main === module) {
   main().catch(error => { log('fatal', { error: error.stack || error.message }); status('fatal', { error: error.message }); process.exitCode = 1; });
 }
 
-module.exports = { deriveResidentialHoleCandidates, deriveZoningCandidates, describeZoningCandidate, evaluateMajor, nearestRoadDistance, readConfig, setZonePreflightHasChanges, validateAction };
+module.exports = { deriveResidentialHoleCandidates, deriveRoadBuildCandidates, deriveZoningCandidates, describeZoningCandidate, evaluateMajor, nearestRoadDistance, readConfig, setZonePreflightHasChanges, validateAction };
