@@ -35,7 +35,7 @@ Returns bridge status without requiring a loaded city.
 
 ## GET /state/summary
 
-Returns a small city snapshot: game time, build index, network counts, citizen count, and demand values.
+Returns a small city snapshot: game time, build index, network counts, population, and demand values. `citizens.count` matches the in-game Population panel (city district 0 final population); `citizens.managerCount` is the separate `CitizenManager.m_citizenCount` value retained for diagnostics, and `populationSource` identifies the source used.
 
 ## GET /state/demand
 
@@ -76,6 +76,19 @@ developed blocks.
 
 ```powershell
 Invoke-RestMethod "http://127.0.0.1:32123/state/growables?limit=500"
+```
+
+## GET /state/residential-diagnostics
+
+Returns read-only housing diagnostics: residential buildings with their home
+citizen-unit counts and occupied citizen slots, plus every residential zone
+cell's validity and occupancy masks. Zone blocks include the road segment they
+are attached to when available. `unoccupiedValidResidentialCells` is a useful
+candidate-space signal, not a guarantee that every cell can accept a building;
+CS1 still applies lot footprint, demand, theme, and simulation rules.
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:32123/state/residential-diagnostics
 ```
 
 ## GET /prefabs/roads
@@ -560,3 +573,11 @@ Supported command types:
 - `set-zone`
 
 If an item does not include `dryRun`, it inherits the batch-level `dryRun` value. Batches are limited to 32 commands.
+
+## GET /state/dashboard
+
+Returns one quiet consolidated snapshot for external dashboards. It includes
+`summary` and `economy` and does not create an in-game API notification. Add
+`?includeDetails=true` to include `problems`, `zones`, and service facility
+counts. Dashboard clients should request details less often than the core
+snapshot to limit simulation-thread work.

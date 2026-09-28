@@ -3,7 +3,7 @@ $ErrorActionPreference = "Stop"
 $repo = Split-Path -Parent $PSScriptRoot
 $src = Join-Path $repo "src"
 $out = Join-Path $repo "bin"
-$game = "D:\SteamLibrary\steamapps\common\Cities_Skylines"
+$game = "C:\Program Files (x86)\Steam\steamapps\common\Cities_Skylines"
 $managed = Join-Path $game "Cities_Data\Managed"
 $csc = "$env:WINDIR\Microsoft.NET\Framework\v3.5\csc.exe"
 
@@ -26,11 +26,16 @@ $target = Join-Path $out "SkylinesAgentBridge.dll"
 
 & $csc `
     /nologo `
+    /noconfig `
+    /nostdlib+ `
     /target:library `
     /out:$target `
     /debug:pdbonly `
     /optimize+ `
     /define:TRACE `
+    /reference:"$managed\mscorlib.dll" `
+    /reference:"$managed\System.dll" `
+    /reference:"$managed\System.Core.dll" `
     /reference:"$managed\ICities.dll" `
     /reference:"$managed\Assembly-CSharp.dll" `
     /reference:"$managed\Assembly-CSharp-firstpass.dll" `

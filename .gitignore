@@ -11,5 +11,7 @@ docs/.vitepress/dist/
 *.log
 screen-*.png
 local.props
+autonomy/config.json
+autonomy/runtime/
 tmp/
 tmp/parameter-logs/
