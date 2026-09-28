@@ -27,6 +27,8 @@ namespace SkylinesAgentBridge
             float radiusSq = radius * radius;
             int touchedBlocks = 0;
             int skippedOccupiedBlocks = 0;
+            int skippedOccupiedCells = 0;
+            int eligibleCells = 0;
             int changedCells = 0;
 
             for (int i = 1; i < manager.m_blocks.m_buffer.Length; i++)
@@ -45,34 +47,60 @@ namespace SkylinesAgentBridge
                 }
 
                 touchedBlocks++;
-                if (preserveOccupied && ZoneBlockHasProtectedBuilding(block))
+                int rows = ZoneHelpers.GetRowCount(block);
+                bool skippedAnyOccupiedCell = false;
+                int blockEligibleCells = 0;
+                for (int z = 0; z < rows; z++)
                 {
-                    skippedOccupiedBlocks++;
-                    continue;
-                }
-
-                if (!dryRun)
-                {
-                    int rows = ZoneHelpers.GetRowCount(block);
-
-                    for (int z = 0; z < rows; z++)
+                    for (int x = 0; x < 4; x++)
                     {
-                        for (int x = 0; x < 4; x++)
+                        int bitIndex = z * (int)ZoneBlock.COLUMN_COUNT + x;
+                        ulong cellMask = 1UL << bitIndex;
+                        if ((block.m_valid & cellMask) == 0)
                         {
-                            try
+                            continue;
+                        }
+
+                        if (preserveOccupied && (block.IsOccupied1(x, z) || block.IsOccupied2(x, z)))
+                        {
+                            skippedOccupiedCells++;
+                            skippedAnyOccupiedCell = true;
+                            continue;
+                        }
+
+                        if (block.GetZone(x, z) == zone)
+                        {
+                            continue;
+                        }
+
+                        eligibleCells++;
+                        blockEligibleCells++;
+                        if (dryRun)
+                        {
+                            continue;
+                        }
+
+                        try
+                        {
+                            if (manager.m_blocks.m_buffer[i].SetZone(x, z, zone))
                             {
-                                if (manager.m_blocks.m_buffer[i].SetZone(x, z, zone))
-                                {
-                                    changedCells++;
-                                }
-                            }
-                            catch (System.Exception ex)
-                            {
-                                Debug.Log("[SkylinesAgentBridge] Skipped zone cell " + i + "/" + x + "/" + z + ": " + ex.Message);
+                                changedCells++;
                             }
                         }
+                        catch (System.Exception ex)
+                        {
+                            Debug.Log("[SkylinesAgentBridge] Skipped zone cell " + i + "/" + x + "/" + z + ": " + ex.Message);
+                        }
                     }
+                }
 
+                if (skippedAnyOccupiedCell)
+                {
+                    skippedOccupiedBlocks++;
+                }
+
+                if (!dryRun && blockEligibleCells > 0)
+                {
                     try
                     {
                         manager.m_blocks.m_buffer[i].RefreshZoning((ushort)i);
@@ -87,10 +115,10 @@ namespace SkylinesAgentBridge
 
             if (dryRun)
             {
-                return CommandResult.FromJson("{\"ok\":true,\"dryRun\":true,\"zone\":\"" + JsonUtil.Escape(zoneName) + "\",\"preserveOccupied\":" + JsonUtil.Bool(preserveOccupied) + ",\"matchingBlocks\":" + touchedBlocks + ",\"skippedOccupiedBlocks\":" + skippedOccupiedBlocks + "}");
+                return CommandResult.FromJson("{\"ok\":true,\"dryRun\":true,\"zone\":\"" + JsonUtil.Escape(zoneName) + "\",\"preserveOccupied\":" + JsonUtil.Bool(preserveOccupied) + ",\"matchingBlocks\":" + touchedBlocks + ",\"skippedOccupiedBlocks\":" + skippedOccupiedBlocks + ",\"skippedOccupiedCells\":" + skippedOccupiedCells + ",\"eligibleCells\":" + eligibleCells + "}");
             }
 
-            return CommandResult.FromJson("{\"ok\":true,\"dryRun\":false,\"zone\":\"" + JsonUtil.Escape(zoneName) + "\",\"preserveOccupied\":" + JsonUtil.Bool(preserveOccupied) + ",\"touchedBlocks\":" + touchedBlocks + ",\"skippedOccupiedBlocks\":" + skippedOccupiedBlocks + ",\"changedCells\":" + changedCells + "}");
+            return CommandResult.FromJson("{\"ok\":true,\"dryRun\":false,\"zone\":\"" + JsonUtil.Escape(zoneName) + "\",\"preserveOccupied\":" + JsonUtil.Bool(preserveOccupied) + ",\"touchedBlocks\":" + touchedBlocks + ",\"skippedOccupiedBlocks\":" + skippedOccupiedBlocks + ",\"skippedOccupiedCells\":" + skippedOccupiedCells + ",\"eligibleCells\":" + eligibleCells + ",\"changedCells\":" + changedCells + "}");
         }
 
         public static CommandResult RepairZonesToGrowables(string body)
