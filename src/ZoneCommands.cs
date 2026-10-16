@@ -22,6 +22,18 @@ namespace SkylinesAgentBridge
             {
                 return CommandResult.Fail("Unsupported zone: " + zoneName);
             }
+            if (!CostHelpers.FeatureUnlocked(UnlockManager.Feature.Zoning))
+            {
+                return CostHelpers.FeatureLocked("Zoning");
+            }
+            if (zone != ItemClass.Zone.Unzoned && !CostHelpers.ZoneUnlocked(zone))
+            {
+                return CostHelpers.FeatureLocked("The " + zoneName + " zone");
+            }
+            if (CostHelpers.OutOfArea(center))
+            {
+                return CostHelpers.OutsideOwnedArea("This zoning area");
+            }
 
             ZoneManager manager = ZoneManager.instance;
             float radiusSq = radius * radius;
@@ -29,8 +41,10 @@ namespace SkylinesAgentBridge
             int skippedOccupiedBlocks = 0;
             int changedCells = 0;
 
-            for (int i = 1; i < manager.m_blocks.m_buffer.Length; i++)
+            // Zone-grid lookup instead of scanning every zone block.
+            foreach (ushort gridBlock in GridHelpers.ZoneBlocksNear(center, radius))
             {
+                int i = gridBlock;
                 ZoneBlock block = manager.m_blocks.m_buffer[i];
                 if ((block.m_flags & ZoneBlock.FLAG_CREATED) == 0)
                 {

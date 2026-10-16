@@ -53,7 +53,10 @@ namespace SkylinesAgentBridge
                 return defaultValue;
             }
 
-            return match.Groups[1].Value.Replace("\\\"", "\"").Replace("\\\\", "\\");
+            // Decode \uXXXX first (Windows PowerShell sends ' as '), but not when
+            // the backslash itself is escaped (\\u0027 is a literal backslash-u).
+            string value = Regex.Replace(match.Groups[1].Value, "(?<!\\\\)\\\\u([0-9a-fA-F]{4})", delegate (Match m) { return ((char)System.Convert.ToInt32(m.Groups[1].Value, 16)).ToString(); });
+            return value.Replace("\\\"", "\"").Replace("\\\\", "\\");
         }
 
         public static bool GetBool(string json, string name, bool defaultValue)

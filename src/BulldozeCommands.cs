@@ -1,4 +1,4 @@
-namespace SkylinesAgentBridge
+﻿namespace SkylinesAgentBridge
 {
     public static class BulldozeCommands
     {
@@ -27,7 +27,7 @@ namespace SkylinesAgentBridge
                     GameThreadHelpers.ReleaseBuilding(manager, id);
                 }
 
-                return CommandResult.FromJson("{\"ok\":true,\"dryRun\":" + JsonUtil.Bool(dryRun) + ",\"entityType\":\"building\",\"id\":" + id + "}");
+                return CommandResult.FromJson("{\"ok\":true,\"dryRun\":" + JsonUtil.Bool(dryRun) + ",\"entityType\":\"building\",\"id\":" + id + ",\"path\":\"" + JsonUtil.Escape(GameThreadHelpers.LastReleasePath) + "\",\"flagsAfter\":\"" + manager.m_buildings.m_buffer[id].m_flags + "\"}");
             }
 
             if (entityType == "netSegment")

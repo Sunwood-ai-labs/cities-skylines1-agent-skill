@@ -1244,7 +1244,9 @@ namespace SkylinesAgentBridge
                         continue;
                     }
 
-                    for (ushort segmentId = 1; segmentId < net.m_segments.m_buffer.Length; segmentId++)
+                    // Only roads near this building (segment grid), not every road in the city.
+                    float reach = Mathf.Max(buildingInfo.m_cellWidth, buildingInfo.m_cellLength) * 8f;
+                    foreach (ushort segmentId in GridHelpers.SegmentsNear(building.m_position, reach))
                     {
                         NetSegment segment = net.m_segments.m_buffer[segmentId];
                         if (!IsCreatedRoadSegment(segment))

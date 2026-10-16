@@ -13,3 +13,4 @@ screen-*.png
 local.props
 tmp/
 tmp/parameter-logs/
+health-history.json

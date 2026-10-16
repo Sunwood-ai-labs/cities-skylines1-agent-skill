@@ -132,6 +132,77 @@ the six tax sliders shown in the CS1 budget UI.
 Invoke-RestMethod http://127.0.0.1:32123/state/economy
 ```
 
+## GET /state/budget
+
+Returns a read-only budget snapshot: `cash`, `lastCashDelta`, loans, and per
+service `income`, `expenses`, `net`, and day/night budget slider values, plus
+`totalIncome`, `totalExpenses`, and `totalNet`. `buildingMaintenance` lists the
+`top` (default 25) most expensive player buildings, and `networkMaintenance`
+sums road, pipe, and power line upkeep per prefab. Money values are converted
+from CS1's internal cents.
+
+```powershell
+Invoke-RestMethod "http://127.0.0.1:32123/state/budget?top=25"
+```
+
+## GET /state/utilities
+
+City-wide capacity versus use for `electricity` (MW), `water`, `sewage`
+(m3/week), and `heating`, each with `capacity`, `used`, `headroom`, and
+`usedPercent`, plus `garbage` landfill storage, incineration capacity versus
+accumulation, and garbage piles. Check this before expanding the city; values
+near 100% mean a shortage is imminent.
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:32123/state/utilities
+```
+
+## GET /state/transport-lines
+
+Lists public transport lines with `id`, `number`, `name`, `type`, `complete`,
+`stops`, `vehicles`, `targetVehicles`, and average `passengers`.
+
+## POST /commands/create-transport-line
+
+Creates a line from an ordered list of stops. Each stop is snapped onto the
+nearest road segment within 40 m, and the loop is closed back to the first
+stop like the in-game tool. A depot for the transport type must exist for
+vehicles to spawn. Use `dryRun: true` to preview the snapped stop positions.
+
+```json
+{
+  "dryRun": false,
+  "transportInfo": "Bus",
+  "stops": [ { "x": 2600, "z": -300 }, { "x": 2400, "z": -300 }, { "x": 2400, "z": -100 } ]
+}
+```
+
+## POST /commands/set-transport-line-budget
+
+Sets a line's budget percentage (1–150), which together with line length sets
+its target vehicle count. Returns the target count before and after.
+
+```json
+{ "id": 6, "budget": 25 }
+```
+
+## GET /state/line-vehicles?id=N
+
+Lists the vehicle models compatible with a line, with passenger `capacity`,
+plus the line's `defaultVehicle` and `selectedVehicle`.
+
+## POST /commands/set-line-vehicle
+
+```json
+{ "id": 6, "vehicle": "Bus" }
+```
+
+## POST /commands/remove-transport-line
+
+```json
+{ "id": 3 }
+```
+
 ## GET /state/facilities
 
 Returns current buildings grouped by CS1 service, with optional service
@@ -303,6 +374,13 @@ Response:
 ```
 
 When `dryRun` is `false`, the mod creates two nodes and one segment with `NetManager`.
+
+Optional fields:
+
+- `start.y` / `end.y`: keep an explicit node height (bridges, elevated roads); otherwise nodes sit on the ground or water surface.
+- `control: { "x": .., "z": .. }`: bend the segment into a smooth curve whose start and end tangents aim at this point (like the in-game curved road tool).
+
+Construction is charged at the network's real price, locked prefabs are refused, and every part must lie within owned map tiles.
 
 ## POST /commands/build-road
 
@@ -485,6 +563,179 @@ apply the rate broadly; pass `dryRun: true` to preview the affected tax rows.
 
 Useful services are `Residential`, `Commercial`, `Industrial`, and `Office`.
 `rate` must be between `0` and `29`.
+
+## Game rules
+
+Commands play by the game's own rules, so an agent faces the same challenge as
+a player:
+
+- Building, networks, relocation, trees and landscaping are charged at the
+  game's real prices, and refused with a "not enough money" error when the
+  treasury can't cover them.
+- Prefabs, zones and features locked behind milestones (for example taxes,
+  high-density zones, landscaping) are refused until the city unlocks them.
+- Everything must sit on map tiles the city owns.
+
+Pass `dryRun: true` to most commands to see the cost and whether it is
+affordable and unlocked before spending anything.
+
+## GET /prefabs/info?name=NAME
+
+Planning facts for one building or network prefab: `unlocked`, size,
+`constructionCost`, upkeep, electricity output and the AI's public numeric
+settings (`aiFields`). Electricity values are in the game's internal units;
+multiply by 16 for kW (a coal plant's 2500 is 40 MW).
+
+## GET /prefabs/trees
+
+Lists loaded tree prefabs with `cost` and `unlocked`.
+
+## POST /commands/place-tree
+
+```json
+{ "treePrefab": "Tree2", "position": { "x": 2602, "z": -346 } }
+```
+
+Plants one tree on the ground at the game's tree price.
+
+## GET /state/policies
+
+City-wide policies that are loaded (DLC present), with `unlocked` and `enabled`.
+
+## POST /commands/set-policy
+
+```json
+{ "policy": "Recycling", "enabled": true }
+```
+
+Use the policy names from `/state/policies`. Locked policies can't be enabled.
+
+## GET /state/areas
+
+Map tiles: owned, purchasable next, and their prices.
+
+## POST /commands/buy-area
+
+```json
+{ "dryRun": false, "x": 1920, "z": 1920 }
+```
+
+Buys the tile containing the point at the real land price.
+
+## POST /commands/set-building-emptying
+
+```json
+{ "id": 16048, "emptying": true }
+```
+
+Empties a landfill or cemetery (or switches it back), as the building panel's
+"empty" button does.
+
+## POST /commands/terrain-level
+
+```json
+{ "dryRun": true, "center": { "x": 2000, "z": 100 }, "radius": 110, "height": 274, "mode": "raise" }
+```
+
+Levels a circle of owned land to `height` metres. `mode` is `set`, `raise`
+(only fill) or `lower` (only cut). Dirt follows the game's dirt economy: digging
+fills the dirt buffer, filling empties it, and only the excess is bought or sold,
+charged as landscaping.
+
+## POST /commands/terrain-channel
+
+```json
+{ "dryRun": true, "start": { "x": 1000, "z": 800 }, "end": { "x": 1200, "z": 800 }, "width": 24, "startY": 262, "endY": 258 }
+```
+
+Cuts a sloped drainage channel whose bed runs from `startY` to `endY`. It
+never raises ground.
+
+## GET /state/wind?x1=&z1=&x2=&z2=&step=&top=
+
+The data behind the Wind info view (`WeatherManager.SampleWindSpeed`, 0 to 1),
+sampled on a grid at ground height. The response has:
+
+- `grid`: every sample, with `x`, `z`, ground height `y`, `wind` and `owned`.
+- `bestOwned`: the `top` windiest owned points.
+- `turbines`: the wind at each existing wind turbine.
+
+Turbine output scales with wind, so site turbines where this reads high, not
+just on high ground. The `y` values also make a quick, free terrain survey.
+
+## GET /state/traffic?x1=&z1=&x2=&z2=
+
+Road segments inside a box, each with:
+
+- `density`: the game's traffic density, 0 to 100, which is what the Traffic
+  info view colours by.
+- the vehicles on the segment right now: `cars`, `trucks` and `buses`.
+- `blocked`: how many of those vehicles are queueing.
+
+Sample it several times and average, because vehicles move between readings.
+
+## POST /commands/set-junction-lights
+
+```json
+{ "nodeId": 31263, "enabled": false }
+```
+
+Switches a junction's traffic lights off or on. It works the way the game's own
+junction toggle does: the node is marked custom, then its lights flag is
+cleared or set. For example, switch every node of a roundabout off so traffic
+gives way instead of stopping.
+
+## Names
+
+The game uses the names you give streets, lines, districts and the city
+throughout the UI.
+
+### POST /commands/rename-road
+
+```json
+{ "from": "Agent Lane 1", "to": "Market Lane" }
+```
+
+Renames every segment that currently has the `from` name.
+
+### POST /commands/rename-line
+
+```json
+{ "id": 155, "name": "6 Main Avenue Rattler" }
+```
+
+### POST /commands/set-city-name
+
+```json
+{ "name": "Claude's Crossing" }
+```
+
+### POST /commands/paint-district
+
+```json
+{ "name": "Dingo Flat", "x1": 1440, "z1": -520, "x2": 2880, "z2": -190 }
+```
+
+Paints a rectangle of owned land into the named district, creating the district
+if no district has that name yet. Repeat the call with the same name to add more
+area. Later paints overwrite earlier ones where they overlap.
+
+### GET /state/districts
+
+Named districts, each with its painted `cells` and `population`.
+
+## Other additions
+
+- `/state/transport-lines` gives each line's `stopPositions` as `[x, z]` pairs,
+  so you can see which streets a route serves.
+- `/commands/bulldoze` on a building reports the release `path` taken and
+  `flagsAfter`.
+- Half-deleted buildings (with both the Created and Deleted flags) are finished
+  off properly, so storm ruins that the game itself can't remove can be cleared.
+- JSON string values decode `\uXXXX` escapes. Windows PowerShell's
+  `ConvertTo-Json` sends `'` as `'`, which used to leak into names.
+- Commands run on the simulation thread (`SimulationManager.AddAction`), and
+  saves run on the main thread.
 
 ## POST /commands/batch
 

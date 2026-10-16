@@ -42,7 +42,7 @@ namespace SkylinesAgentBridge
 
         public void ProcessGameThreadQueue(float realTimeDelta)
         {
-            queue.Process(4);
+            queue.Process(32);
             AgentBridgeNotifier.Update(realTimeDelta);
         }
 
