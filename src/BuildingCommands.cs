@@ -19,6 +19,10 @@ namespace SkylinesAgentBridge
             {
                 return CommandResult.Fail("buildingPrefab is required.");
             }
+            if (CostHelpers.OutOfArea(position))
+            {
+                return CostHelpers.OutsideOwnedArea("This building site");
+            }
 
             BuildingInfo info = PrefabCollection<BuildingInfo>.FindLoaded(prefabName);
             if (info == null)
@@ -33,9 +37,19 @@ namespace SkylinesAgentBridge
             TerrainManager terrain = TerrainManager.instance;
             position.y = terrain.SampleRawHeightSmoothWithWater(position, false, 0f);
 
+            int cost = CostHelpers.BuildingCost(info);
+            bool unlocked = CostHelpers.IsUnlocked(info);
             if (dryRun)
             {
-                return CommandResult.FromJson("{\"ok\":true,\"dryRun\":true,\"message\":\"Place-building validation passed.\",\"buildingPrefab\":\"" + JsonUtil.Escape(prefabName) + "\"}");
+                return CommandResult.FromJson("{\"ok\":true,\"dryRun\":true,\"message\":\"Place-building validation passed.\",\"buildingPrefab\":\"" + JsonUtil.Escape(prefabName) + "\",\"cost\":" + CostHelpers.Money(cost) + ",\"affordable\":" + JsonUtil.Bool(CostHelpers.CanAfford(cost)) + ",\"unlocked\":" + JsonUtil.Bool(unlocked) + "}");
+            }
+            if (!unlocked)
+            {
+                return CostHelpers.Locked(prefabName);
+            }
+            if (!CostHelpers.CanAfford(cost))
+            {
+                return CostHelpers.NotEnoughMoney(cost);
             }
 
             SimulationManager simulation = Singleton<SimulationManager>.instance;
@@ -61,8 +75,10 @@ namespace SkylinesAgentBridge
             }
 
             simulation.m_currentBuildIndex += 1u;
+            CostHelpers.Charge(cost, info.m_class);
 
             string json = "{\"ok\":true,\"dryRun\":false,\"buildingId\":" + buildingId +
+                ",\"cost\":" + CostHelpers.Money(cost) +
                 ",\"buildingPrefab\":\"" + JsonUtil.Escape(prefabName) + "\"" +
                 ",\"service\":\"" + JsonUtil.Escape(info.m_class.m_service.ToString()) + "\"" +
                 ",\"subService\":\"" + JsonUtil.Escape(info.m_class.m_subService.ToString()) + "\"}";
@@ -99,15 +115,24 @@ namespace SkylinesAgentBridge
             }
 
             Vector3 position = ReadPoint(body, "position");
+            if (CostHelpers.OutOfArea(position))
+            {
+                return CostHelpers.OutsideOwnedArea("The new position");
+            }
             TerrainManager terrain = TerrainManager.instance;
             position.y = terrain.SampleRawHeightSmoothWithWater(position, false, 0f);
             float angleDegrees = JsonUtil.GetNumber(body, "angleDegrees", oldBuilding.m_angle * Mathf.Rad2Deg);
             float angle = angleDegrees * Mathf.Deg2Rad;
 
+            int cost = CostHelpers.RelocationCost(info);
             if (dryRun)
             {
                 return CommandResult.FromJson("{\"ok\":true,\"dryRun\":true,\"message\":\"Move-building validation passed.\",\"id\":" + id +
-                    ",\"buildingPrefab\":\"" + JsonUtil.Escape(info.name) + "\"}");
+                    ",\"buildingPrefab\":\"" + JsonUtil.Escape(info.name) + "\",\"cost\":" + CostHelpers.Money(cost) + "}");
+            }
+            if (!CostHelpers.CanAfford(cost))
+            {
+                return CostHelpers.NotEnoughMoney(cost);
             }
 
             SimulationManager simulation = Singleton<SimulationManager>.instance;
@@ -129,6 +154,7 @@ namespace SkylinesAgentBridge
             }
 
             simulation.m_currentBuildIndex += 1u;
+            CostHelpers.Charge(cost, info.m_class);
             GameThreadHelpers.ReleaseBuilding(buildings, id);
 
             string json = "{\"ok\":true,\"dryRun\":false,\"oldBuildingId\":" + id +
@@ -140,6 +166,37 @@ namespace SkylinesAgentBridge
 
             Debug.Log("[SkylinesAgentBridge] Moved building " + id + " to " + newBuildingId + " with prefab " + info.name);
             return CommandResult.FromJson(json);
+        }
+
+        // The building panel's "Empty" toggle (landfills, cemeteries, snow
+        // dumps): the building stops accepting deliveries and its vehicles haul
+        // the stored contents to other facilities.
+        public static CommandResult SetBuildingEmptying(string body)
+        {
+            ushort id = (ushort)JsonUtil.GetNumber(body, "id", 0f);
+            bool emptying = JsonUtil.GetBool(body, "emptying", true);
+
+            BuildingManager buildings = BuildingManager.instance;
+            if (id == 0 || (buildings.m_buildings.m_buffer[id].m_flags & Building.Flags.Created) == Building.Flags.None)
+            {
+                return CommandResult.Fail("Building was not found: " + id);
+            }
+
+            Building building = buildings.m_buildings.m_buffer[id];
+            BuildingInfo info = building.Info;
+            if (info == null || info.m_buildingAI == null)
+            {
+                return CommandResult.Fail("Building has no AI: " + id);
+            }
+
+            info.m_buildingAI.SetEmptying(id, ref building, emptying);
+            buildings.m_buildings.m_buffer[id] = building;
+
+            bool now = (building.m_flags & Building.Flags.Downgrading) != Building.Flags.None;
+            return CommandResult.FromJson("{\"ok\":true,\"id\":" + id +
+                ",\"prefab\":\"" + JsonUtil.Escape(info.name) + "\"" +
+                ",\"emptying\":" + JsonUtil.Bool(now) +
+                ",\"flags\":\"" + JsonUtil.Escape(building.m_flags.ToString()) + "\"}");
         }
 
         public static CommandResult SetBuildingActive(string body)

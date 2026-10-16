@@ -136,6 +136,108 @@ namespace SkylinesAgentBridge
                 return RunOnGameThread(request, GameState.BuildEconomyJson);
             }
 
+            if (request.Method == "GET" && request.Path == "/state/budget")
+            {
+                int top = request.GetQueryInt("top", 25);
+                return RunOnGameThread(request, delegate { return BudgetCommands.BuildBudgetJson(top); });
+            }
+
+            if (request.Method == "GET" && request.Path == "/state/utilities")
+            {
+                return RunOnGameThread(request, UtilityCommands.BuildUtilitiesJson);
+            }
+
+            if (request.Method == "GET" && request.Path == "/state/traffic")
+            {
+                float tx1 = request.GetQueryFloat("x1", -4800f), tz1 = request.GetQueryFloat("z1", -4800f);
+                float tx2 = request.GetQueryFloat("x2", 4800f), tz2 = request.GetQueryFloat("z2", 4800f);
+                return RunOnGameThread(request, delegate { return TrafficCommands.BuildTrafficJson(tx1, tz1, tx2, tz2); });
+            }
+
+            if (request.Method == "GET" && request.Path == "/state/wind")
+            {
+                float wx1 = request.GetQueryFloat("x1", -4800f), wz1 = request.GetQueryFloat("z1", -4800f);
+                float wx2 = request.GetQueryFloat("x2", 4800f), wz2 = request.GetQueryFloat("z2", 4800f);
+                float wstep = request.GetQueryFloat("step", 160f);
+                int wtop = request.GetQueryInt("top", 10);
+                return RunOnGameThread(request, delegate { return WindCommands.BuildWindJson(wx1, wz1, wx2, wz2, wstep, wtop); });
+            }
+
+            if (request.Method == "POST" && request.Path == "/commands/terrain-channel")
+            {
+                string body = request.Body;
+                return RunOnGameThread(request, delegate { return TerrainCommands.Channel(body); });
+            }
+
+            if (request.Method == "POST" && request.Path == "/commands/terrain-level")
+            {
+                string body = request.Body;
+                return RunOnGameThread(request, delegate { return TerrainCommands.Level(body); });
+            }
+
+            if (request.Method == "GET" && request.Path == "/prefabs/info")
+            {
+                string prefabName = request.GetQueryString("name", "");
+                return RunOnGameThread(request, delegate { return PrefabInfoCommands.BuildPrefabInfoJson(prefabName); });
+            }
+
+            if (request.Method == "GET" && request.Path == "/state/policies")
+            {
+                return RunOnGameThread(request, PolicyCommands.BuildPoliciesJson);
+            }
+
+            if (request.Method == "POST" && request.Path == "/commands/set-policy")
+            {
+                string body = request.Body;
+                return RunOnGameThread(request, delegate { return PolicyCommands.SetPolicy(body); });
+            }
+
+            if (request.Method == "GET" && request.Path == "/state/areas")
+            {
+                return RunOnGameThread(request, AreaCommands.BuildAreasJson);
+            }
+
+            if (request.Method == "POST" && request.Path == "/commands/buy-area")
+            {
+                string body = request.Body;
+                return RunOnGameThread(request, delegate { return AreaCommands.BuyArea(body); });
+            }
+
+            if (request.Method == "GET" && request.Path == "/state/transport-lines")
+            {
+                return RunOnGameThread(request, TransportCommands.BuildLinesJson);
+            }
+
+            if (request.Method == "POST" && request.Path == "/commands/create-transport-line")
+            {
+                string body = request.Body;
+                return RunOnGameThread(request, delegate { return TransportCommands.CreateLine(body); });
+            }
+
+            if (request.Method == "GET" && request.Path == "/state/line-vehicles")
+            {
+                ushort lineId = (ushort)request.GetQueryInt("id", 0);
+                return RunOnGameThread(request, delegate { return TransportCommands.BuildLineVehiclesJson(lineId); });
+            }
+
+            if (request.Method == "POST" && request.Path == "/commands/set-line-vehicle")
+            {
+                string body = request.Body;
+                return RunOnGameThread(request, delegate { return TransportCommands.SetLineVehicle(body); });
+            }
+
+            if (request.Method == "POST" && request.Path == "/commands/set-transport-line-budget")
+            {
+                string body = request.Body;
+                return RunOnGameThread(request, delegate { return TransportCommands.SetLineBudget(body); });
+            }
+
+            if (request.Method == "POST" && request.Path == "/commands/remove-transport-line")
+            {
+                string body = request.Body;
+                return RunOnGameThread(request, delegate { return TransportCommands.RemoveLine(body); });
+            }
+
             if (request.Method == "GET" && request.Path == "/state/facilities")
             {
                 int limit = request.GetQueryInt("limit", 500);
@@ -246,6 +348,52 @@ namespace SkylinesAgentBridge
                 return RunOnGameThread(request, delegate { return BuildingCommands.PlaceBuilding(body); });
             }
 
+            if (request.Method == "POST" && request.Path == "/commands/paint-district")
+            {
+                string body = request.Body;
+                return RunOnGameThread(request, delegate { return DistrictCommands.PaintDistrict(body); });
+            }
+
+            if (request.Method == "POST" && request.Path == "/commands/rename-line")
+            {
+                string body = request.Body;
+                return RunOnGameThread(request, delegate { return DistrictCommands.RenameLine(body); });
+            }
+
+            if (request.Method == "GET" && request.Path == "/state/districts")
+            {
+                return RunOnGameThread(request, DistrictCommands.BuildDistrictsJson);
+            }
+
+            if (request.Method == "POST" && request.Path == "/commands/set-city-name")
+            {
+                string body = request.Body;
+                return RunOnGameThread(request, delegate { return NameCommands.SetCityName(body); });
+            }
+
+            if (request.Method == "POST" && request.Path == "/commands/place-tree")
+            {
+                string body = request.Body;
+                return RunOnGameThread(request, delegate { return TreeCommands.PlaceTree(body); });
+            }
+
+            if (request.Method == "GET" && request.Path == "/prefabs/trees")
+            {
+                return RunOnGameThread(request, TreeCommands.BuildTreesJson);
+            }
+
+            if (request.Method == "POST" && request.Path == "/commands/set-junction-lights")
+            {
+                string body = request.Body;
+                return RunOnGameThread(request, delegate { return NameCommands.SetJunctionLights(body); });
+            }
+
+            if (request.Method == "POST" && request.Path == "/commands/rename-road")
+            {
+                string body = request.Body;
+                return RunOnGameThread(request, delegate { return NameCommands.RenameRoad(body); });
+            }
+
             if (request.Method == "POST" && request.Path == "/commands/move-building")
             {
                 string body = request.Body;
@@ -256,6 +404,12 @@ namespace SkylinesAgentBridge
             {
                 string body = request.Body;
                 return RunOnGameThread(request, delegate { return BuildingCommands.SetBuildingActive(body); });
+            }
+
+            if (request.Method == "POST" && request.Path == "/commands/set-building-emptying")
+            {
+                string body = request.Body;
+                return RunOnGameThread(request, delegate { return BuildingCommands.SetBuildingEmptying(body); });
             }
 
             if (request.Method == "POST" && request.Path == "/commands/disable-blocked-assets")
@@ -303,12 +457,17 @@ namespace SkylinesAgentBridge
                 return HttpResponse.Json(409, "{\"ok\":false,\"error\":\"No city is loaded.\"}");
             }
 
-            CommandResult result = bridge.Queue.RunSync(action, 10000);
-            bridge.Queue.RunSync(delegate
+            // World reads and changes run on the simulation thread; saving drives
+            // the save panel UI, so it stays on the main thread.
+            CommandResult result = request.Path == "/commands/save"
+                ? bridge.Queue.RunSync(action, 10000)
+                : bridge.Queue.RunOnSimulation(action, 10000);
+            string note = (result.Ok ? "API OK: " : "API FAIL: ") + DescribeRequest(request);
+            bridge.Queue.Post(delegate
             {
-                AgentBridgeNotifier.Notify((result.Ok ? "API OK: " : "API FAIL: ") + DescribeRequest(request));
+                AgentBridgeNotifier.Notify(note);
                 return CommandResult.FromJson("{\"ok\":true}");
-            }, 10000);
+            });
             return HttpResponse.Json(result.Ok ? 200 : 500, result.Json);
         }
 
@@ -324,6 +483,13 @@ namespace SkylinesAgentBridge
                 if (request.Path == "/state/chirps") return "Read citizen chirps";
                 if (request.Path == "/state/zones") return "Read zoning summary";
                 if (request.Path == "/state/economy") return "Read economy state";
+                if (request.Path == "/state/budget") return "Read budget";
+                if (request.Path == "/state/utilities") return "Read utility capacity";
+                if (request.Path == "/state/wind") return "Read wind map";
+                if (request.Path == "/prefabs/trees") return "List tree prefabs";
+                if (request.Path == "/state/traffic") return "Read road traffic";
+                if (request.Path == "/state/districts") return "Read districts";
+                if (request.Path == "/state/transport-lines") return "Read transport lines";
                 if (request.Path == "/state/facilities") return "Read facilities";
                 if (request.Path == "/state/growables") return "Read growable buildings";
                 if (request.Path == "/state/networks") return "Read networks";
@@ -362,6 +528,36 @@ namespace SkylinesAgentBridge
             if (request.Path == "/commands/place-building")
             {
                 return "Place building " + JsonUtil.GetString(body, "buildingPrefab", "");
+            }
+
+            if (request.Path == "/commands/paint-district")
+            {
+                return "Paint district " + JsonUtil.GetString(body, "name", "");
+            }
+
+            if (request.Path == "/commands/rename-line")
+            {
+                return "Rename line #" + ((int)JsonUtil.GetNumber(body, "id", 0f)).ToString() + " to " + JsonUtil.GetString(body, "name", "");
+            }
+
+            if (request.Path == "/commands/set-city-name")
+            {
+                return "Rename city to " + JsonUtil.GetString(body, "name", "");
+            }
+
+            if (request.Path == "/commands/place-tree")
+            {
+                return "Plant tree " + JsonUtil.GetString(body, "treePrefab", "");
+            }
+
+            if (request.Path == "/commands/set-junction-lights")
+            {
+                return "Set traffic lights at node #" + ((int)JsonUtil.GetNumber(body, "nodeId", 0f)).ToString();
+            }
+
+            if (request.Path == "/commands/rename-road")
+            {
+                return "Rename road " + JsonUtil.GetString(body, "from", "") + " to " + JsonUtil.GetString(body, "to", "");
             }
 
             if (request.Path == "/commands/move-building")

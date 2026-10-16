@@ -25,14 +25,36 @@ namespace SkylinesAgentBridge
             {
                 return CommandResult.Fail("Road is too short.");
             }
+            if (CostHelpers.OutOfArea(start) || CostHelpers.OutOfArea(end) || CostHelpers.OutOfArea((start + end) * 0.5f))
+            {
+                return CostHelpers.OutsideOwnedArea("Part of this network");
+            }
 
+            // An explicit "y" on a point (e.g. a bridge deck) is kept as an
+            // absolute height; otherwise the node sits on the ground/water.
             TerrainManager terrain = TerrainManager.instance;
-            start.y = terrain.SampleRawHeightSmoothWithWater(start, false, 0f);
-            end.y = terrain.SampleRawHeightSmoothWithWater(end, false, 0f);
+            if (!HasPointY(body, "start"))
+            {
+                start.y = terrain.SampleRawHeightSmoothWithWater(start, false, 0f);
+            }
+            if (!HasPointY(body, "end"))
+            {
+                end.y = terrain.SampleRawHeightSmoothWithWater(end, false, 0f);
+            }
 
+            int cost = CostHelpers.NetCost(info, start, end);
+            bool unlocked = CostHelpers.IsUnlocked(info);
             if (dryRun)
             {
-                return CommandResult.FromJson("{\"ok\":true,\"dryRun\":true,\"message\":\"Build-road validation passed.\",\"roadPrefab\":\"" + JsonUtil.Escape(prefabName) + "\"}");
+                return CommandResult.FromJson("{\"ok\":true,\"dryRun\":true,\"message\":\"Build-road validation passed.\",\"roadPrefab\":\"" + JsonUtil.Escape(prefabName) + "\",\"cost\":" + CostHelpers.Money(cost) + ",\"affordable\":" + JsonUtil.Bool(CostHelpers.CanAfford(cost)) + ",\"unlocked\":" + JsonUtil.Bool(unlocked) + "}");
+            }
+            if (!unlocked)
+            {
+                return CostHelpers.Locked(prefabName);
+            }
+            if (!CostHelpers.CanAfford(cost))
+            {
+                return CostHelpers.NotEnoughMoney(cost);
             }
 
             SimulationManager simulation = Singleton<SimulationManager>.instance;
@@ -70,7 +92,24 @@ namespace SkylinesAgentBridge
                 simulation.m_currentBuildIndex += 1u;
             }
 
-            Vector3 direction = (end - start).normalized;
+            // Optional "control" point bends the segment into a smooth curve, the
+            // way the game's curved road tool does (start/end tangents aim at it).
+            Vector3 startDirection = (end - start).normalized;
+            Vector3 endDirection = -startDirection;
+            if (!float.IsNaN(JsonUtil.GetPointNumber(body, "control", "x", float.NaN)))
+            {
+                Vector3 control = ReadPoint(body, "control");
+                control.y = (start.y + end.y) * 0.5f;
+                Vector3 toControl = control - start;
+                Vector3 fromControl = control - end;
+                toControl.y = 0f;
+                fromControl.y = 0f;
+                if (toControl.sqrMagnitude > 1f && fromControl.sqrMagnitude > 1f)
+                {
+                    startDirection = toControl.normalized;
+                    endDirection = fromControl.normalized;
+                }
+            }
             ushort segment;
             bool created = net.CreateSegment(
                 out segment,
@@ -78,8 +117,8 @@ namespace SkylinesAgentBridge
                 info,
                 startNode,
                 endNode,
-                direction,
-                -direction,
+                startDirection,
+                endDirection,
                 simulation.m_currentBuildIndex,
                 simulation.m_currentBuildIndex,
                 false);
@@ -92,6 +131,7 @@ namespace SkylinesAgentBridge
             }
 
             simulation.m_currentBuildIndex += 2u;
+            CostHelpers.Charge(cost, info.m_class);
 
             if (name != null && name.Length > 0)
             {
@@ -101,6 +141,7 @@ namespace SkylinesAgentBridge
             string json = "{\"ok\":true,\"dryRun\":false,\"segmentId\":" + segment +
                 ",\"startNodeId\":" + startNode +
                 ",\"endNodeId\":" + endNode +
+                ",\"cost\":" + CostHelpers.Money(cost) +
                 ",\"roadPrefab\":\"" + JsonUtil.Escape(prefabName) + "\"}";
 
             Debug.Log("[SkylinesAgentBridge] Built road segment " + segment + " with prefab " + prefabName);
@@ -109,10 +150,12 @@ namespace SkylinesAgentBridge
 
         private static ushort FindNearbyNode(Vector3 position, float maxDistance, NetInfo info)
         {
+            // Grid lookup instead of scanning all nodes; returns the nearest match.
             NetManager net = NetManager.instance;
-            float maxDistanceSq = maxDistance * maxDistance;
+            float bestSq = maxDistance * maxDistance;
+            ushort best = 0;
 
-            for (ushort i = 1; i < net.m_nodes.m_buffer.Length; i++)
+            foreach (ushort i in GridHelpers.NodesNear(position, maxDistance))
             {
                 NetNode node = net.m_nodes.m_buffer[i];
                 if ((node.m_flags & NetNode.Flags.Created) == NetNode.Flags.None)
@@ -126,13 +169,14 @@ namespace SkylinesAgentBridge
 
                 Vector3 delta = node.m_position - position;
                 delta.y = 0f;
-                if (delta.sqrMagnitude <= maxDistanceSq)
+                if (delta.sqrMagnitude <= bestSq)
                 {
-                    return i;
+                    bestSq = delta.sqrMagnitude;
+                    best = i;
                 }
             }
 
-            return 0;
+            return best;
         }
 
         private static bool CanReuseNode(NetInfo existing, NetInfo requested)
@@ -149,6 +193,11 @@ namespace SkylinesAgentBridge
 
             return existing.m_class.m_service == ItemClass.Service.Road &&
                 requested.m_class.m_service == ItemClass.Service.Road;
+        }
+
+        private static bool HasPointY(string body, string name)
+        {
+            return !float.IsNaN(JsonUtil.GetPointNumber(body, name, "y", float.NaN));
         }
 
         private static Vector3 ReadPoint(string body, string name)

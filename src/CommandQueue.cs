@@ -26,6 +26,34 @@ namespace SkylinesAgentBridge
             return command.Result;
         }
 
+        // Runs work on the simulation thread via SimulationManager.AddAction, the
+        // way the game's own tools change world data (it also runs while paused).
+        // Falls back to the main-thread queue when no simulation exists.
+        public CommandResult RunOnSimulation(Func<CommandResult> work, int timeoutMs)
+        {
+            if (!ColossalFramework.Singleton<SimulationManager>.exists)
+            {
+                return RunSync(work, timeoutMs);
+            }
+
+            QueuedCommand command = new QueuedCommand(work);
+            ColossalFramework.Singleton<SimulationManager>.instance.AddAction(new Action(command.Execute));
+            if (!command.Wait(timeoutMs))
+            {
+                return CommandResult.Fail("Timed out waiting for the simulation thread.");
+            }
+            return command.Result;
+        }
+
+        // Fire-and-forget work for the main thread (UI notifications).
+        public void Post(Func<CommandResult> work)
+        {
+            lock (gate)
+            {
+                commands.Enqueue(new QueuedCommand(work));
+            }
+        }
+
         public void Process(int maxCount)
         {
             int processed = 0;

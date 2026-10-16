@@ -114,6 +114,10 @@ namespace SkylinesAgentBridge
             {
                 return CommandResult.Fail("rate must be between 0 and 29.");
             }
+            if (!CostHelpers.FeatureUnlocked(UnlockManager.Feature.Taxes))
+            {
+                return CostHelpers.FeatureLocked("Tax control");
+            }
 
             ItemClass.Service serviceFilter;
             bool hasServiceFilter = TryParseService(serviceText, out serviceFilter);
