@@ -2,7 +2,7 @@
 
 This case study records a PLATEAU-based Nagoya Station prototype in Cities: Skylines 1. The selected ten buildings keep their measured shapes and relative positions, with authored 2050 facade and rooftop retrofits. Corresponding source photographs were not locally available for these ten buildings; the new exteriors are inferred designs.
 
-The current record contains individual game screenshots for 10 of the ten selected buildings and 15 screenshots in total. The last recorded runtime scene contains 44 models. These counts describe the saved evidence, rather than a live game feed.
+The current record contains individual game screenshots for 10 of the ten selected buildings and 18 screenshots in total. The last recorded runtime scene contains 44 models. These counts describe the saved evidence, rather than a live game feed.
 
 [Japanese illustrated record](../ja/guide/nagoya-2050-visuals.md)
 

@@ -95,6 +95,30 @@
       "file": "phase2-android-cargo.png"
     },
     {
+      "title": "駅前広場",
+      "sha256": "e8469a4bd2383a3de0010014444226ae9cfc390bdde821b10cd498bcca19fa36",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "file": "phase2-publicrealm.png"
+    },
+    {
+      "title": "駅前広場 PR2",
+      "sha256": "4f28172407e7e27c6fa2efc7ada6fc72285e8d0315882d1669edcbf054171b0c",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "file": "phase2-publicrealm-pr2.png"
+    },
+    {
+      "title": "街区全景",
+      "sha256": "eaff7c088dd64c001ac7fb2a5cf2ac47847792096c417b870a8a5a9217a1670a",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "file": "phase2-district.png"
+    },
+    {
       "title": "主要建物の修正前（front）",
       "sha256": "eed88b916437d8d06d60e321c3b1065dff51dcdfc07355a60d6f2329923cb112",
       "width": 1600,
