@@ -176,4 +176,4 @@ MIT。詳細は [LICENSE](LICENSE) を参照してください。
 
 PLATEAU建物・アンドロイドの整備と、実ゲームの変更前後スクショを記録しています。
 
-[View the illustrated record](docs/ja/guide/nagoya-2050-visuals.md)
+[画像付きの記録を見る](docs/ja/guide/nagoya-2050-visuals.md)

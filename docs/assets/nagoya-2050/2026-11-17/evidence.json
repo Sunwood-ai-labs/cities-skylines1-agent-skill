@@ -1,12 +1,14 @@
 {
   "recordDate": "2026-11-17",
-  "sceneRevision": "station40-phase2-eight-1",
-  "lastRecordedModels": 40,
+  "sceneRevision": "station44-phase2-final-1",
+  "lastRecordedModels": 44,
+  "buildingsInScene": 42,
+  "publicRealmObjects": 2,
   "blenderSkillsCommit": "904f095d8f36a6e72adaebb08d07f884a074743d",
   "screenshots": [
     {
       "title": "建物01 — bldg_d1a837ed-fad7-43c7-94c5-f51820402a90",
-      "sha256": "b1fc84e4f397d79acafd90f20d89ec396e1eead24c28e29a06c18a15334059b8",
+      "sha256": "f068867955f1e1b5310975f5086987c5107407dc9d3eb64347bdf1432a8f310d",
       "width": 1600,
       "height": 900,
       "kind": "actual CS1 screenshot, unedited",
@@ -14,11 +16,83 @@
     },
     {
       "title": "建物02 — bldg_63357b46-b465-4801-b6be-3b2606f9b7fb",
-      "sha256": "aab5d10f766494a465642ec5eb290520dabc63942a412d1f09cd384f4303c92f",
+      "sha256": "cbe19d67b265eb4a1d33c320fd7e1af980c8812777c6fdab9ba4d4ae6c484a28",
       "width": 1600,
       "height": 900,
       "kind": "actual CS1 screenshot, unedited",
       "file": "phase2-building-02.png"
+    },
+    {
+      "title": "建物03 — bldg_f89ef351-3857-45b6-abdc-7b3dc8f66c8c",
+      "sha256": "8616fe423f7149bdd910d27f466005479332ec1c1dade253a92ef096e3cc9d0e",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "file": "phase2-building-03.png"
+    },
+    {
+      "title": "建物04 — bldg_bd0623e1-7cb3-458b-95b6-6a6953e58b39",
+      "sha256": "8a7d6e7e540c40df9b8f53dbfb0bb33834cc77251bd1e104b700a3d67d275cd1",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "file": "phase2-building-04.png"
+    },
+    {
+      "title": "建物05 — bldg_ebb3502f-89a2-4fcd-b652-eb757e6b1213",
+      "sha256": "c158c3f9064d76ca08710bd3f464ebe0c3c9eefca81d68a28dbf53fa59441d6f",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "file": "phase2-building-05.png"
+    },
+    {
+      "title": "建物06 — bldg_18971f17-fb89-486f-8a11-969af0720c52",
+      "sha256": "163a8213927ac8095e47f6829c75b487befae771dd0d10df19caa760db81d7d7",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "file": "phase2-building-06.png"
+    },
+    {
+      "title": "建物07 — bldg_f00ea62c-0de5-4d16-a2a0-5d4e957ae395",
+      "sha256": "90709e9a3bc8fd78363dcc119acbffb8ab5d273fe1849e41c7eea7676f6f12aa",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "file": "phase2-building-07.png"
+    },
+    {
+      "title": "建物08 — bldg_eddf3b01-3881-417c-a348-58b796bd75fe",
+      "sha256": "497d5d5f0ac7f9442da5bf098d58f5a3ad163d409191be9d1430deafca5934fc",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "file": "phase2-building-08.png"
+    },
+    {
+      "title": "建物09 — bldg_51afdba6-916f-47e2-8280-96b8990bbc30",
+      "sha256": "2acc904e9458ec1611eea55eb015523f82761efc3ba704d61bdf84eee807e37e",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "file": "phase2-building-09.png"
+    },
+    {
+      "title": "建物10 — bldg_e755b566-7f32-42a1-8c9f-922b6a63c543",
+      "sha256": "6a9a91adc19d835fbe47f9a4593ce5628f7724f11dd4e1e3b600e61c56a61470",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "file": "phase2-building-10.png"
+    },
+    {
+      "title": "アンドロイド配送中",
+      "sha256": "63a2734ce1f1626cebd7b51a53c6e3209fd1fc26c61086e82cffc15c04b118c9",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "file": "phase2-android-cargo.png"
     },
     {
       "title": "主要建物の修正前（front）",
