@@ -171,3 +171,9 @@ CS1 on Windows 向けの実験プロジェクトです。まずは捨てセー�
 ## 📄 ライセンス
 
 MIT。詳細は [LICENSE](LICENSE) を参照してください。
+
+## 名古屋駅2050の外観整備
+
+PLATEAU建物・アンドロイドの整備と、実ゲームの変更前後スクショを記録しています。
+
+[View the illustrated record](docs/ja/guide/nagoya-2050-visuals.md)
