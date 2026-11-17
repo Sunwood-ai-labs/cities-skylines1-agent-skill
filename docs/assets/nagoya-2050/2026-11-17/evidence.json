@@ -1,0 +1,313 @@
+{
+  "recordDate": "2026-11-17",
+  "sceneRevision": "station44-phase2-final-1",
+  "lastRecordedModels": 44,
+  "buildingsInScene": 42,
+  "publicRealmObjects": 2,
+  "blenderSkillsCommit": "904f095d8f36a6e72adaebb08d07f884a074743d",
+  "screenshots": [
+    {
+      "title": "建物01 — bldg_d1a837ed-fad7-43c7-94c5-f51820402a90",
+      "sha256": "f068867955f1e1b5310975f5086987c5107407dc9d3eb64347bdf1432a8f310d",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "revision": "station44-phase2-final-1",
+      "currentModelCount": 44,
+      "runId": "20261116T155709934Z",
+      "file": "phase2-building-01.png"
+    },
+    {
+      "title": "建物02 — bldg_63357b46-b465-4801-b6be-3b2606f9b7fb",
+      "sha256": "cbe19d67b265eb4a1d33c320fd7e1af980c8812777c6fdab9ba4d4ae6c484a28",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "revision": "station44-phase2-final-1",
+      "currentModelCount": 44,
+      "runId": "20261116T155709934Z",
+      "file": "phase2-building-02.png"
+    },
+    {
+      "title": "建物03 — bldg_f89ef351-3857-45b6-abdc-7b3dc8f66c8c",
+      "sha256": "8616fe423f7149bdd910d27f466005479332ec1c1dade253a92ef096e3cc9d0e",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "revision": "station44-phase2-final-1",
+      "currentModelCount": 44,
+      "runId": "20261116T155709934Z",
+      "file": "phase2-building-03.png"
+    },
+    {
+      "title": "建物04 — bldg_bd0623e1-7cb3-458b-95b6-6a6953e58b39",
+      "sha256": "8a7d6e7e540c40df9b8f53dbfb0bb33834cc77251bd1e104b700a3d67d275cd1",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "revision": "station44-phase2-final-1",
+      "currentModelCount": 44,
+      "file": "phase2-building-04.png"
+    },
+    {
+      "title": "建物05 — bldg_ebb3502f-89a2-4fcd-b652-eb757e6b1213",
+      "sha256": "c158c3f9064d76ca08710bd3f464ebe0c3c9eefca81d68a28dbf53fa59441d6f",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "revision": "station44-phase2-final-1",
+      "currentModelCount": 44,
+      "runId": "20261116T155709934Z",
+      "file": "phase2-building-05.png"
+    },
+    {
+      "title": "建物06 — bldg_18971f17-fb89-486f-8a11-969af0720c52",
+      "sha256": "163a8213927ac8095e47f6829c75b487befae771dd0d10df19caa760db81d7d7",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "revision": "station44-phase2-final-1",
+      "currentModelCount": 44,
+      "runId": "20261116T155709934Z",
+      "file": "phase2-building-06.png"
+    },
+    {
+      "title": "建物07 — bldg_f00ea62c-0de5-4d16-a2a0-5d4e957ae395",
+      "sha256": "90709e9a3bc8fd78363dcc119acbffb8ab5d273fe1849e41c7eea7676f6f12aa",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "revision": "station44-phase2-final-1",
+      "currentModelCount": 44,
+      "runId": "20261116T155709934Z",
+      "file": "phase2-building-07.png"
+    },
+    {
+      "title": "建物08 — bldg_eddf3b01-3881-417c-a348-58b796bd75fe",
+      "sha256": "497d5d5f0ac7f9442da5bf098d58f5a3ad163d409191be9d1430deafca5934fc",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "revision": "station44-phase2-final-1",
+      "currentModelCount": 44,
+      "runId": "20261116T155709934Z",
+      "file": "phase2-building-08.png"
+    },
+    {
+      "title": "建物09 — bldg_51afdba6-916f-47e2-8280-96b8990bbc30",
+      "sha256": "2acc904e9458ec1611eea55eb015523f82761efc3ba704d61bdf84eee807e37e",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "revision": "station44-phase2-final-1",
+      "currentModelCount": 44,
+      "runId": "20261116T155709934Z",
+      "file": "phase2-building-09.png"
+    },
+    {
+      "title": "建物10 — bldg_e755b566-7f32-42a1-8c9f-922b6a63c543",
+      "sha256": "6a9a91adc19d835fbe47f9a4593ce5628f7724f11dd4e1e3b600e61c56a61470",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "revision": "station44-phase2-final-1",
+      "currentModelCount": 44,
+      "runId": "20261116T155709934Z",
+      "file": "phase2-building-10.png"
+    },
+    {
+      "title": "アンドロイド配送中",
+      "sha256": "63a2734ce1f1626cebd7b51a53c6e3209fd1fc26c61086e82cffc15c04b118c9",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "revision": "station44-phase2-final-1",
+      "currentModelCount": 44,
+      "runId": "20261116T155709934Z",
+      "file": "phase2-android-cargo.png"
+    },
+    {
+      "title": "駅前広場",
+      "sha256": "e8469a4bd2383a3de0010014444226ae9cfc390bdde821b10cd498bcca19fa36",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "revision": "station44-phase2-final-1",
+      "currentModelCount": 44,
+      "runId": "20261116T163435235Z",
+      "file": "phase2-publicrealm.png"
+    },
+    {
+      "title": "駅前広場 PR2",
+      "sha256": "4f28172407e7e27c6fa2efc7ada6fc72285e8d0315882d1669edcbf054171b0c",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "revision": "station44-phase2-final-1",
+      "currentModelCount": 44,
+      "runId": "20261116T163435235Z",
+      "file": "phase2-publicrealm-pr2.png"
+    },
+    {
+      "title": "街区全景",
+      "sha256": "eaff7c088dd64c001ac7fb2a5cf2ac47847792096c417b870a8a5a9217a1670a",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "revision": "station44-phase2-final-1",
+      "currentModelCount": 44,
+      "runId": "20261116T163435235Z",
+      "file": "phase2-district.png"
+    },
+    {
+      "title": "20拠点へ拡張した街区",
+      "sha256": "e9a07fa0a7e6bd297a03c29bcfcb1a1ce02e66ac8dd5c61be77590d1982fdc75",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "revision": "station44-phase2-final-1",
+      "currentModelCount": 44,
+      "runId": "20261117T021603652Z",
+      "file": "phase2-service20-overview.png"
+    },
+    {
+      "title": "新しい建物への接続路",
+      "sha256": "581a6fae4284044b0dcf23612215070b0b8e8048f59f17e31002616f393f08a0",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "revision": "station44-phase2-final-1",
+      "currentModelCount": 44,
+      "runId": "20261117T021603652Z",
+      "file": "phase2-service20-building04.png"
+    },
+    {
+      "title": "人間とアンドロイドの共存",
+      "sha256": "8a4421b94cfa025740d5deaf6c3c1a6c1ea4c9e956c7d7ed1fc9c59b234fb90f",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "revision": "station44-phase2-final-1",
+      "currentModelCount": 44,
+      "runId": "20261117T021603652Z",
+      "file": "phase2-service20-cargo-context.png"
+    },
+    {
+      "title": "20拠点の配送完了",
+      "sha256": "1fee4f56b8bf0d5f491db5be49f11ffe40d7556a483847ce8c588160a05eacf6",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "revision": "station44-phase2-final-1",
+      "currentModelCount": 44,
+      "runId": "20261117T021603652Z",
+      "file": "phase2-service20-completed-overview.png"
+    },
+    {
+      "title": "配送後の充電完了",
+      "sha256": "3a14b8c4072ea7c367d07cbf01224c9340e75e710a65e322648b5402c3e5006f",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "revision": "station44-phase2-final-1",
+      "currentModelCount": 44,
+      "runId": "20261117T021603652Z",
+      "file": "phase2-service20-charged.png"
+    },
+    {
+      "title": "主要建物の修正前（front）",
+      "sha256": "eed88b916437d8d06d60e321c3b1065dff51dcdfc07355a60d6f2329923cb112",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "file": "phase2-first-hero-before-front.png"
+    },
+    {
+      "title": "主要建物の修正後（front）",
+      "sha256": "56c629c955c8457b3c0998a45d2f31f0e41c10d00f43b520d30e292c80d42155",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "file": "phase2-first-hero-after-front.png"
+    },
+    {
+      "title": "主要建物の修正前（roof）",
+      "sha256": "e19ea4a46cd0abd175847ea7bfe56f15292edace1fd42dd853f572e38d384842",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "file": "phase2-first-hero-before-roof.png"
+    },
+    {
+      "title": "主要建物の修正後（roof）",
+      "sha256": "ce5806f821c5fff78ade91975e8d7fd3ee37c7e97d9d5a95b113e0c3453e475f",
+      "width": 1600,
+      "height": 900,
+      "kind": "actual CS1 screenshot, unedited",
+      "file": "phase2-first-hero-after-roof.png"
+    }
+  ],
+  "buildings": [
+    {
+      "id": "bldg_d1a837ed-fad7-43c7-94c5-f51820402a90",
+      "x": 165.90988688931247,
+      "z": -120.818483382056,
+      "sourceHeight": 6.001367972037727
+    },
+    {
+      "id": "bldg_63357b46-b465-4801-b6be-3b2606f9b7fb",
+      "x": 30.823741257656366,
+      "z": 229.67249413364334,
+      "sourceHeight": 59.371233601342595
+    },
+    {
+      "id": "bldg_f89ef351-3857-45b6-abdc-7b3dc8f66c8c",
+      "x": -6.4097298220222,
+      "z": 259.95850948939915,
+      "sourceHeight": 8.805441130102288
+    },
+    {
+      "id": "bldg_bd0623e1-7cb3-458b-95b6-6a6953e58b39",
+      "x": 158.74669786630693,
+      "z": 233.4647976430424,
+      "sourceHeight": 38.17808916488184
+    },
+    {
+      "id": "bldg_ebb3502f-89a2-4fcd-b652-eb757e6b1213",
+      "x": 12.151451722191268,
+      "z": 294.9980472860625,
+      "sourceHeight": 66.82005042666283
+    },
+    {
+      "id": "bldg_18971f17-fb89-486f-8a11-969af0720c52",
+      "x": 316.34739711435395,
+      "z": 19.84978611554834,
+      "sourceHeight": 75.38151457114597
+    },
+    {
+      "id": "bldg_f00ea62c-0de5-4d16-a2a0-5d4e957ae395",
+      "x": 255.39390045095934,
+      "z": 195.0948369220423,
+      "sourceHeight": 10.673620591184033
+    },
+    {
+      "id": "bldg_eddf3b01-3881-417c-a348-58b796bd75fe",
+      "x": 31.015978104820533,
+      "z": 358.5176725391357,
+      "sourceHeight": 37.12351935728638
+    },
+    {
+      "id": "bldg_51afdba6-916f-47e2-8280-96b8990bbc30",
+      "x": 356.2806546364736,
+      "z": 103.1778579892707,
+      "sourceHeight": 62.27577713370732
+    },
+    {
+      "id": "bldg_e755b566-7f32-42a1-8c9f-922b6a63c543",
+      "x": 351.34132004781713,
+      "z": 132.2454833102238,
+      "sourceHeight": 32.71687662299934
+    }
+  ],
+  "note": "The recorded model count is a runtime snapshot. Screenshots have their own capture times and are not a live game feed."
+}

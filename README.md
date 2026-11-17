@@ -174,3 +174,9 @@ This is experimental and built for CS1 on Windows. Test on throwaway saves first
 ## 📄 License
 
 MIT. See [LICENSE](LICENSE).
+
+## Nagoya 2050 visual experiment
+
+An illustrated record of PLATEAU building retrofits, courier assets and actual CS1 game captures.
+
+[View the illustrated record](docs/guide/nagoya-2050-visuals.md)
