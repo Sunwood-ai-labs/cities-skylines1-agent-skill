@@ -2,7 +2,7 @@
 
 This case study records a PLATEAU-based Nagoya Station prototype in Cities: Skylines 1. The selected ten buildings keep their measured shapes and relative positions, with authored 2050 facade and rooftop retrofits. Corresponding source photographs were not locally available for these ten buildings; the new exteriors are inferred designs.
 
-The current record contains individual game screenshots for 10 of the ten selected buildings and 18 screenshots in total. The last recorded runtime scene contains 44 models. These counts describe the saved evidence, rather than a live game feed.
+The current record contains individual game screenshots for 10 of the ten selected buildings and 23 screenshots in total. The last recorded runtime scene contains 44 models. These counts describe the saved evidence, rather than a live game feed.
 
 [Japanese illustrated record](../ja/guide/nagoya-2050-visuals.md)
 
@@ -13,3 +13,5 @@ Production uses [Blender Skills](https://github.com/arjun988/blender-skills), pi
 The models are runtime scenery rather than native BuildingInfo assets. Courier inventory, battery and routing are a separate experimental mod; prototype pedestrians are excluded from normal housing and employment transfers. This is not a completed Nagoya district or a verification of long-term operation and access roads to every new building.
 
 Shape source: PLATEAU Nagoya 2022, tile 52366700. Game captures: Cities: Skylines 1. Added exteriors and equipment: authored for this experiment. Images are unedited original screenshots, with [SHA-256 evidence](../assets/nagoya-2050/2026-11-17/evidence.json).
+
+The delivery experiment now covers the original ten service buildings plus the ten new buildings. The actual CS1 run verified all twenty pickups and deliveries, three couriers returning to full charge, parcel conservation and the same twelve native pedestrian identities throughout. [Actual run evidence](../assets/nagoya-2050/2026-11-17/service20-verification.json). The pedestrians use native pavements; new service walks are robot routes and scenery. Mutual pedestrian–robot avoidance is not implemented.

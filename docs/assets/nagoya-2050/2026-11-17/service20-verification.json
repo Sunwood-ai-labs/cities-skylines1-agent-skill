@@ -1,0 +1,48 @@
+{
+  "status": "verified",
+  "scope": "Actual CS1 samples, not an offline simulation",
+  "runId": "20261117T021603652Z",
+  "graphSHA256": "fb9291a71e80d02921f479eb592c23b07436cb41f2555b31d23398addab22316",
+  "samples": 256,
+  "elapsedSeconds": 1276.157,
+  "buildingsServed": 20,
+  "parcelsConserved": 20,
+  "sameNativeHumans": 12,
+  "nativeRoadsValidated": 9,
+  "maxNativeHumanDistanceFromRoadCenterM": 7.200141851673602,
+  "maxMovingAndroidDistanceFromGraphM": 0.00028027640567935224,
+  "maxParkedAndroidDistanceFromGraphM": 0.6500310954394696,
+  "parkedPoseRule": "WorldX = route X + (robotId-2)*0.65m; WorldZ = route Z",
+  "allThreeDeliveredAndCharged": true,
+  "allNativeHumansMoved": true,
+  "humansEconomicIsolation": true,
+  "robotSummaries": [
+    {
+      "id": 1,
+      "deliveries": 6,
+      "charges": 2,
+      "meters": 4692.1712097142,
+      "battery": 100
+    },
+    {
+      "id": 2,
+      "deliveries": 6,
+      "charges": 2,
+      "meters": 4287.56668325527,
+      "battery": 100
+    },
+    {
+      "id": 3,
+      "deliveries": 8,
+      "charges": 2,
+      "meters": 4348.75744506571,
+      "battery": 100
+    }
+  ],
+  "paused": true,
+  "normalSpeedChangeRecorded": true,
+  "limitations": [
+    "Authored service paths are scenery/robot routes; native humans stay on native pavements.",
+    "Buildings are runtime scenery, not standard BuildingInfo or normal building economy."
+  ]
+}
